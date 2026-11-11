@@ -1,0 +1,1414 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Мои контакты</title>
+<style>
+:root{
+  --bg:#f7f3f5; --panel:#ffffff; --text:#2a1a24; --muted:#8a7681; --line:#efe3e9;
+  --accent:#ff2e63; --accent-d:#e01a50; --danger:#e5484d;
+  --wa:#25d366; --tg:#2aabee; --vk:#0077ff; --max:#8b3ffd;
+  --shadow:0 1px 2px rgba(80,20,50,.05),0 10px 28px rgba(80,20,50,.08);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#1a1117; --panel:#261820; --text:#fbeef3; --muted:#b399a6; --line:#3a2530; --shadow:0 1px 2px rgba(0,0,0,.4),0 6px 20px rgba(0,0,0,.35);}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{margin:0;height:100%}
+body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+button,input,select,textarea{font:inherit;color:inherit}
+.app{max-width:1100px;margin:0 auto;padding:20px 20px 60px}
+header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:22px 26px;border-radius:30px;color:#fff;
+  background:radial-gradient(circle at 100% 0,rgba(255,255,255,.22),transparent 45%),linear-gradient(135deg,#ff2e63 0%,#ff4f8b 100%);
+  box-shadow:0 14px 34px rgba(255,46,99,.32)}
+h1{font-size:28px;margin:0 8px 0 0;font-weight:800;letter-spacing:-.02em;line-height:1.1}
+h1 small{display:block;font-size:13.5px;font-weight:600;color:rgba(255,255,255,.85);letter-spacing:0;margin-top:5px}
+.logo{display:inline-block;transform:rotate(-8deg);margin-right:6px}
+.spacer{flex:1}
+.me{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.18);padding:8px 14px;border-radius:999px;font-weight:700;font-size:14px}
+.me i{font-style:normal;background:#fff;color:var(--accent);border-radius:999px;font-size:11px;padding:2px 8px;font-weight:800}
+.hrow{display:flex;gap:8px;flex-basis:100%;margin-top:8px;flex-wrap:wrap;align-items:center}
+.hact{display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;justify-content:flex-end}
+.tab{border:none;background:rgba(255,255,255,.16);color:#fff;font-weight:800;padding:10px 22px;border-radius:999px;cursor:pointer;font-size:15px;transition:.15s}
+.tab:hover{background:rgba(255,255,255,.3)}
+.tab.on{background:#fff;color:var(--accent);box-shadow:0 6px 16px rgba(120,0,40,.25)}
+.btn{border:2px solid var(--line);background:var(--panel);padding:9px 18px;border-radius:999px;cursor:pointer;transition:.15s;font-weight:700}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(255,46,99,.35)}
+.btn.primary:hover{background:var(--accent-d);border-color:var(--accent-d);color:#fff}
+.btn.big{padding:13px 18px;font-size:16px}
+header .btn{background:rgba(255,255,255,.18);border-color:transparent;color:#fff;padding:8px 15px;font-size:14px}
+header .btn:hover{background:rgba(255,255,255,.32);color:#fff}
+header .btn.primary{background:#fff;color:var(--accent);box-shadow:0 6px 16px rgba(120,0,40,.25)}
+header .btn.primary:hover{background:#fff;color:var(--accent-d);transform:translateY(-1px)}
+.btn.danger{color:var(--danger)}
+.btn.danger:hover{border-color:var(--danger);color:var(--danger)}
+.view{display:none}
+.view.on{display:block}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.search{flex:1;min-width:220px;position:relative}
+.search input{width:100%;padding:13px 18px 13px 44px;border-radius:999px;border:2px solid var(--line);background:var(--panel);outline:none}
+.search input:focus,.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(255,46,99,.15)}
+.search svg{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:var(--accent)}
+select.flt{padding:12px 16px;border-radius:999px;border:2px solid var(--line);background:var(--panel);cursor:pointer;font-weight:600}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.chip{border:2px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 15px;font-size:14px;font-weight:700;cursor:pointer;display:flex;gap:8px;align-items:center;transition:.15s}
+.chip:hover{border-color:var(--accent)}
+.chip b{font-weight:800;color:var(--accent);font-size:13px}
+.chip.on{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 6px 14px rgba(255,46,99,.3)}
+.chip.on b{color:#fff;opacity:.85}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(380px,100%),1fr));gap:16px}
+.card{background:var(--panel);border:2px solid transparent;border-radius:26px;padding:18px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:14px;transition:.18s}
+.card:hover{transform:translateY(-3px);border-color:rgba(255,46,99,.35)}
+.card-top{display:flex;gap:12px;align-items:center}
+.avatar{width:48px;height:48px;border-radius:18px;display:grid;place-items:center;color:#fff;font-weight:800;font-size:19px;flex:none}
+.avatar.emoji{background:var(--bg);font-size:24px}
+.who{min-width:0;flex:1}
+.name{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phone{color:var(--muted);font-size:13.5px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums}
+.phone:hover{color:var(--accent)}
+.host{color:var(--muted);font-size:12.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stagewrap{position:relative;display:inline-flex;align-items:center;border-radius:999px;font-size:12px;font-weight:800;flex:none}
+.stagewrap select{appearance:none;-webkit-appearance:none;border:none;background:transparent;color:inherit;font:inherit;font-weight:800;padding:6px 26px 6px 12px;cursor:pointer;outline:none;border-radius:999px;max-width:160px}
+.stagewrap::after{content:"▾";position:absolute;right:10px;pointer-events:none}
+.stagewrap select option{color:var(--text);background:var(--panel)}
+.notes{font-size:13.5px;color:var(--text);opacity:.75;white-space:pre-wrap;max-height:4.6em;overflow:hidden;line-height:1.5;background:var(--bg);padding:10px 12px;border-radius:14px}
+.chat{display:flex;gap:8px;flex-wrap:wrap}
+.go{display:flex;align-items:center;gap:6px;border:none;cursor:pointer;color:#fff;font-weight:700;font-size:13.5px;padding:9px 15px;border-radius:999px;transition:.15s}
+.go:hover{filter:brightness(1.08);transform:translateY(-1px)}
+.go.wa{background:var(--wa)} .go.tg{background:var(--tg)} .go.vk{background:var(--vk)} .go.max{background:var(--max)} .go.pink{background:var(--accent)}
+.go.big{padding:11px 20px;font-size:15px;box-shadow:0 6px 16px rgba(0,0,0,.14)}
+.go.sm{padding:7px 12px;font-size:12.5px}
+.go.deal{background:transparent;color:var(--accent);box-shadow:inset 0 0 0 2px var(--accent)}
+.go.deal:hover{background:var(--accent);color:#fff}
+.go.off{background:var(--line);color:var(--muted);box-shadow:none}
+.go.deal.off{background:transparent;color:var(--muted);box-shadow:inset 0 0 0 2px var(--line)}
+.card-foot{display:flex;align-items:center;gap:8px;margin-top:auto}
+.card-foot .date{font-size:12px;color:var(--muted);flex:1}
+.icon{border:none;background:transparent;cursor:pointer;color:var(--muted);padding:6px 8px;border-radius:8px}
+.icon:hover{background:var(--bg);color:var(--text)}
+.gh{font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;color:var(--accent);margin:24px 4px 10px}
+.gh:first-child{margin-top:4px}
+.sec{font-size:19px;font-weight:800;margin:28px 2px 4px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.sec:first-child{margin-top:4px}
+.sec small{font-size:12.5px;color:var(--muted);font-weight:600}
+.grid .sec,.grid .gh,.grid .hint{grid-column:1/-1}
+.card.add,.tile.add{background:transparent;border:3px dashed rgba(255,46,99,.35);box-shadow:none;color:var(--accent);align-items:center;justify-content:center;text-align:center;font-weight:800;cursor:pointer;min-height:120px}
+.card.add:hover,.tile.add:hover{background:rgba(255,46,99,.06);border-color:var(--accent)}
+.card.add .plus,.tile.add .plus{font-size:34px;line-height:1}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:14px}
+.tile{background:var(--panel);border-radius:26px;padding:20px 14px 16px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;gap:8px;text-align:center;cursor:pointer;position:relative;border:2px solid transparent;transition:.18s}
+.tile:hover{transform:translateY(-3px);border-color:rgba(255,46,99,.35)}
+.tile .ic{width:60px;height:60px;border-radius:22px;display:grid;place-items:center;font-size:30px;background:var(--bg)}
+.tile .tt{font-weight:800}
+.tile .sub{font-size:12px;color:var(--muted);min-height:1.2em}
+.tile .edit{position:absolute;top:8px;right:8px;opacity:0;font-size:12px}
+.tile:hover .edit{opacity:1}
+.empty{text-align:center;color:var(--muted);padding:70px 20px;border:3px dashed rgba(255,46,99,.35);border-radius:30px;font-weight:600}
+.empty h2{color:var(--accent);margin:0 0 6px;font-size:22px;font-weight:800}
+.empty .big{font-size:44px;display:block;margin-bottom:8px}
+dialog{border:none;border-radius:30px;padding:0;width:min(520px,94vw);max-height:92vh;overflow:auto;background:var(--panel);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
+.dlg{padding:24px;display:flex;flex-direction:column;gap:14px}
+.dlg h2{margin:0;font-size:22px;font-weight:800;color:var(--accent)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12.5px;font-weight:700;color:var(--muted)}
+.field input,.field select,.field textarea{padding:11px 14px;border-radius:16px;border:2px solid var(--line);background:var(--bg);outline:none;width:100%}
+.field textarea{min-height:90px;resize:vertical}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.msgr{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.m{border:2px solid var(--line);border-radius:18px;padding:11px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.m label.t{display:flex;align-items:center;gap:8px;font-weight:700;cursor:pointer}
+.m input[type=checkbox]{accent-color:var(--accent);width:17px;height:17px}
+.m .dot{width:11px;height:11px;border-radius:50%}
+.m input[type=text]{padding:8px 11px;font-size:13px;border-radius:12px;border:2px solid var(--line);background:var(--panel);width:100%;outline:none}
+.m input[type=text]:disabled{opacity:.4}
+.actions{display:flex;gap:10px;justify-content:flex-end;margin-top:4px}
+.remember{display:flex;gap:8px;align-items:center;font-size:13.5px;font-weight:600;color:var(--muted);cursor:pointer}
+.remember input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.srow{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.srow input[type=text]{flex:1}
+.srow input[type=checkbox]{width:17px;height:17px;padding:0;accent-color:var(--accent)}
+.srow .bell{display:flex;align-items:center;gap:4px;font-weight:700;cursor:pointer;white-space:nowrap;padding:0 6px}
+.srow .mini{border:2px solid var(--line);background:var(--bg);border-radius:12px;padding:6px 10px;cursor:pointer;font-weight:800}
+.srow .mini:hover{border-color:var(--accent);color:var(--accent)}
+.urow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
+.urow:last-child{border-bottom:none}
+.urow select{padding:8px 12px;border-radius:999px;border:2px solid var(--line);background:var(--bg);font-weight:700}
+.dash{display:flex;flex-direction:column;gap:18px}
+.hero{position:relative;overflow:hidden;border-radius:32px;padding:30px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;
+  background:radial-gradient(circle at 92% 15%,rgba(255,46,99,.20),transparent 45%),radial-gradient(circle at 65% 125%,rgba(255,138,0,.18),transparent 50%),var(--panel);box-shadow:var(--shadow)}
+.hero .hi{flex:1;min-width:260px}
+.hero .date{font-size:12.5px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:.09em}
+.hero h2{margin:8px 0 8px;font-size:36px;line-height:1.1;font-weight:800;letter-spacing:-.02em}
+.hero p{margin:0;color:var(--muted);font-weight:600;font-size:15.5px;line-height:1.5;max-width:560px}
+.hero .acts{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.hero .art{width:128px;height:128px;border-radius:40px;display:grid;place-items:center;font-size:68px;background:linear-gradient(135deg,#ff2e63,#ff4f8b);box-shadow:0 18px 40px rgba(255,46,99,.38);transform:rotate(-6deg);flex:none}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.stat{background:var(--panel);border-radius:26px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:8px;border:2px solid transparent;transition:.18s}
+.stat[data-act]:hover{transform:translateY(-3px);border-color:rgba(255,46,99,.35)}
+.stat .ico{width:44px;height:44px;border-radius:16px;display:grid;place-items:center;font-size:22px;background:var(--bg)}
+.stat .num{font-size:36px;font-weight:800;letter-spacing:-.02em;line-height:1}
+.stat .lbl{font-size:13px;font-weight:700;color:var(--muted)}
+.stat.warn{background:#fff3cd;color:#4a3300;border-color:#ffc83d}
+.stat.warn .ico{background:#fff}
+.stat.warn .lbl{color:#7a5a00}
+.dcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(440px,100%),1fr));gap:18px}
+.dcard{background:var(--panel);border-radius:28px;padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:12px}
+.dcard h3{margin:0 0 2px;font-size:17px;font-weight:800;display:flex;align-items:center;gap:8px}
+.dcard h3 small{margin-left:auto;font-size:12.5px;color:var(--muted);font-weight:700}
+.link{border:none;background:none;color:var(--accent);font-weight:800;cursor:pointer;padding:0;font-size:13px}
+.link:hover{text-decoration:underline}
+.frow{display:grid;grid-template-columns:112px 1fr 64px;gap:12px;align-items:center;cursor:pointer;padding:5px 8px;border-radius:14px;transition:.15s}
+.frow:hover{background:var(--bg)}
+.frow.static{cursor:default}
+.frow.static:hover{background:none}
+.frow .fl{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .track{height:14px;border-radius:999px;background:var(--bg);overflow:hidden}
+.frow .fill{height:100%;border-radius:999px;min-width:6px;animation:grow .8s ease both;transform-origin:left}
+.frow .fc{text-align:right;font-weight:800;font-size:14px}
+.frow .fc small{color:var(--muted);font-weight:700;font-size:11.5px;margin-left:4px}
+.drow{display:flex;align-items:center;gap:12px;padding:9px 8px;border-radius:18px;cursor:pointer;transition:.15s}
+.drow:hover{background:var(--bg)}
+.drow .avatar{width:42px;height:42px;border-radius:15px;font-size:16px}
+.drow .nm{font-weight:800;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .sb{font-size:12.5px;color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.drow .sb .pill{margin-right:6px}
+.pill{font-size:11.5px;font-weight:800;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.qa{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:10px}
+.qa .q{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;border-radius:20px;background:var(--bg);cursor:pointer;text-align:center;font-weight:700;font-size:12.5px;transition:.15s;border:2px solid transparent;overflow:hidden}
+.qa .q:hover{border-color:rgba(255,46,99,.4);transform:translateY(-2px)}
+.qa .q span{font-size:28px;line-height:1}
+.dempty{color:var(--muted);font-weight:600;font-size:14px;text-align:center;padding:22px 8px}
+.rise{animation:rise .55s ease both}
+.stat:nth-child(2){animation-delay:.05s}.stat:nth-child(3){animation-delay:.1s}.stat:nth-child(4){animation-delay:.15s}
+.dcard:nth-child(2){animation-delay:.08s}.dcard:nth-child(3){animation-delay:.16s}.dcard:nth-child(4){animation-delay:.24s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:var(--text);color:var(--bg);padding:11px 18px;border-radius:999px;opacity:0;pointer-events:none;transition:.25s;font-size:14px;font-weight:600;z-index:200;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.hint{font-size:12px;color:var(--muted);line-height:1.45}
+.alerts{position:sticky;top:10px;z-index:60;display:flex;flex-direction:column;gap:8px;margin-bottom:14px}
+.alerts:empty{display:none}
+.alert{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 18px;border-radius:22px;background:#fff3cd;color:#4a3300;border:2px solid #ffc83d;box-shadow:0 10px 28px rgba(180,120,0,.25);font-weight:600;animation:drop .35s ease}
+.alert .ico{font-size:22px}
+.alert .txt{flex:1;min-width:200px}
+.alert b{font-weight:800}
+.alert .btn{padding:7px 14px;font-size:13.5px;background:#fff;border-color:#ffc83d;color:#4a3300}
+.alert .btn:hover{border-color:#4a3300;color:#4a3300}
+.alert .btn.ok{background:#4a3300;color:#fff;border-color:#4a3300}
+.alert .more{font-size:13px;font-weight:700}
+@keyframes drop{from{transform:translateY(-14px);opacity:0}to{transform:none;opacity:1}}
+.auth{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:20px;overflow:auto;
+  background:radial-gradient(circle at 100% 0,rgba(255,255,255,.22),transparent 45%),linear-gradient(135deg,#ff2e63 0%,#ff4f8b 100%)}
+.auth-card{width:min(430px,100%);background:var(--panel);border-radius:32px;padding:30px 28px;box-shadow:0 30px 80px rgba(80,0,30,.4);display:flex;flex-direction:column;gap:14px}
+.auth-logo{width:64px;height:64px;border-radius:22px;background:var(--bg);display:grid;place-items:center;font-size:36px}
+.auth-card h2{margin:0;font-size:26px;font-weight:800}
+.auth-sub{margin:-6px 0 0;color:var(--muted);font-weight:600;font-size:14px;line-height:1.45}
+.auth-tabs{display:flex;gap:4px;background:var(--bg);padding:5px;border-radius:999px}
+.auth-tabs button{flex:1;border:none;background:transparent;padding:9px 6px;border-radius:999px;font-weight:800;cursor:pointer;color:var(--muted);font-size:13.5px}
+.auth-tabs button.on{background:var(--accent);color:#fff;box-shadow:0 4px 12px rgba(255,46,99,.35)}
+.auth form{display:flex;flex-direction:column;gap:12px}
+.err{color:var(--danger);font-size:13px;font-weight:700;min-height:1.2em}
+
+/* Встроенные окна ввода и подтверждения для Electron */
+#appMessageDialog{width:min(440px,92vw);border:0;border-radius:24px;padding:0;background:var(--panel);color:var(--text);box-shadow:0 20px 60px rgba(0,0,0,.35)}
+#appMessageDialog::backdrop{background:rgba(30,6,20,.55);backdrop-filter:blur(3px)}
+#appMessageDialog .dlg{padding:24px}
+#appMessageDialog .message-text{white-space:pre-wrap;line-height:1.5;font-weight:600}
+#appMessageDialog input{padding:11px 14px;border-radius:14px;border:2px solid var(--line);background:var(--bg);color:var(--text);outline:none;width:100%}
+#appMessageDialog input:focus{border-color:var(--accent);box-shadow:0 0 0 4px rgba(255,46,99,.15)}
+
+</style>
+</head>
+<body>
+
+<div class="auth" id="auth" hidden>
+  <div class="auth-card">
+    <div class="auth-logo">🛴</div>
+    <h2 id="authTitle">Мои контакты</h2>
+    <p class="auth-sub" id="authSub"></p>
+    <div class="auth-tabs" id="authTabs">
+      <button type="button" data-m="login">Вход</button>
+      <button type="button" data-m="register" id="tabReg">Регистрация</button>
+      <button type="button" data-m="admin">Администратор</button>
+    </div>
+    <form id="authForm" autocomplete="off">
+      <div class="field"><label>Логин</label><input id="aLogin" autocomplete="off" spellcheck="false"></div>
+      <div class="field" id="aNameRow"><label>Ваше имя (как показывать)</label><input id="aName" autocomplete="off"></div>
+      <div class="field"><label>Пароль</label><input id="aPass" type="password" autocomplete="off"></div>
+      <div class="field" id="aPass2Row"><label>Повторите пароль</label><input id="aPass2" type="password" autocomplete="off"></div>
+      <label class="remember"><input type="checkbox" id="aRemember" checked> Запомнить на этом компьютере</label>
+      <div class="err" id="aErr"></div>
+      <button class="btn primary big" type="submit" id="aSubmit">Войти</button>
+    </form>
+    <div class="hint" id="aHint"></div>
+  </div>
+</div>
+
+<div class="app" id="appRoot" hidden>
+  <div class="alerts" id="alerts"></div>
+
+  <header>
+    <h1><span class="logo">🛴</span>Мои контакты<small id="sub"></small></h1>
+    <div class="spacer"></div>
+    <div class="me" id="meChip"></div>
+    <button class="btn" id="btnLogout">Выйти</button>
+    <div class="hrow">
+      <button class="tab on" data-tab="home">🏠 Главная</button>
+      <button class="tab" data-tab="people">👥 Люди</button>
+      <button class="tab" data-tab="sheets">📊 Таблицы</button>
+      <button class="tab" data-tab="apps">🚀 Программы</button>
+      <div class="hact">
+      <button class="btn" id="btnStages" data-tabs="people" data-admin>Стадии и amoCRM</button>
+      <button class="btn" id="btnUsers" data-admin>Пользователи</button>
+      <button class="btn" id="btnRestore" data-tabs="sheets apps" data-admin>Вернуть стандартные</button>
+      <button class="btn" id="btnExport" data-admin>Сохранить копию</button>
+      <button class="btn" id="btnImport" data-admin>Загрузить копию</button>
+      <button class="btn" id="btnCsv" data-tabs="people">В Excel (CSV)</button>
+      <button class="btn primary" id="btnAdd">+ Добавить человека</button>
+      <input type="file" id="file" accept=".json,application/json" hidden>
+      </div>
+    </div>
+  </header>
+
+  <section class="view on" id="v-home">
+    <div class="dash" id="dash"></div>
+  </section>
+
+  <section class="view" id="v-people">
+    <div class="toolbar">
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="q" placeholder="Поиск по имени, номеру, заметкам…" autocomplete="off">
+      </div>
+      <select class="flt" id="fOwner" data-admin><option value="">Все сотрудники</option></select>
+      <select class="flt" id="fMsgr">
+        <option value="">Все мессенджеры</option>
+        <option value="wa">WhatsApp</option>
+        <option value="tg">Telegram</option>
+        <option value="max">MAX</option>
+        <option value="vk">VK</option>
+      </select>
+      <select class="flt" id="fSort">
+        <option value="upd">Сначала недавние</option>
+        <option value="name">По имени</option>
+        <option value="stage">По стадии</option>
+      </select>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="grid" id="list"></div>
+  </section>
+
+  <section class="view" id="v-sheets">
+    <div class="toolbar">
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="qSheets" placeholder="Поиск по таблицам…" autocomplete="off">
+      </div>
+    </div>
+    <div class="grid" id="listSheets"></div>
+  </section>
+
+  <section class="view" id="v-apps">
+    <div class="toolbar">
+      <div class="search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="qApps" placeholder="Поиск по программам…" autocomplete="off">
+      </div>
+    </div>
+    <div id="listApps"></div>
+  </section>
+</div>
+
+<dialog id="dlg">
+  <form method="dialog" class="dlg" id="form">
+    <h2 id="dTitle">Новый контакт</h2>
+    <div class="row2">
+      <div class="field"><label>Имя</label><input id="fName" placeholder="Как записать человека"></div>
+      <div class="field"><label>Номер телефона</label><input id="fPhone" placeholder="+7 900 123-45-67" inputmode="tel"></div>
+    </div>
+    <div class="field">
+      <label>Где общаемся</label>
+      <div class="msgr">
+        <div class="m"><label class="t"><input type="checkbox" id="cWa"><span class="dot" style="background:var(--wa)"></span>WhatsApp</label></div>
+        <div class="m"><label class="t"><input type="checkbox" id="cTg"><span class="dot" style="background:var(--tg)"></span>Telegram</label><input type="text" id="hTg" placeholder="@ник (необязательно)"></div>
+        <div class="m"><label class="t"><input type="checkbox" id="cMax"><span class="dot" style="background:var(--max)"></span>MAX</label><input type="text" id="hMax" placeholder="ссылка на профиль"></div>
+        <div class="m"><label class="t"><input type="checkbox" id="cVk"><span class="dot" style="background:var(--vk)"></span>VK</label><input type="text" id="hVk" placeholder="id или ссылка на страницу"></div>
+      </div>
+      <div class="hint">WhatsApp открывается по номеру. Telegram — по номеру или по @нику. Для VK и MAX вставьте ссылку на профиль, которую вам дал человек.</div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Главная соцсеть (откроется большой кнопкой)</label><select id="fPrimary"></select></div>
+      <div class="field"><label>Стадия оформления</label><select id="fStage"></select></div>
+    </div>
+    <div class="field"><label>Сделка в amoCRM (ссылка или номер сделки)</label><input id="fDeal" placeholder="https://…amocrm.ru/leads/detail/123456  или  123456"><div class="hint">По кнопке «Сделка в amoCRM» откроется эта сделка. Если вписать только номер, администратор должен указать адрес amoCRM в «Стадии и amoCRM».</div></div>
+    <div class="field"><label>Заметки</label><textarea id="fNotes" placeholder="О чём договорились, что важно помнить…"></textarea></div>
+    <div class="actions">
+      <button class="btn danger" type="button" id="bDel" hidden>Удалить</button>
+      <div class="spacer"></div>
+      <button class="btn" type="button" id="bCancel">Отмена</button>
+      <button class="btn primary" type="submit" id="bSave">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgLink">
+  <form method="dialog" class="dlg" id="formLink">
+    <h2 id="lHead">Новая ссылка</h2>
+    <div class="field"><label>Название</label><input id="lTitle" placeholder="Например: Продажи за месяц"></div>
+    <div class="field"><label id="lUrlLabel">Ссылка или путь</label><input id="lUrl" placeholder="https://…"><div class="hint" id="lUrlHint"></div></div>
+    <div class="field"><label>Описание (необязательно)</label><input id="lNote" placeholder="Коротко, для чего это"></div>
+    <div class="field" id="rowScope"><label>Кому показывать</label><select id="lScope"><option value="all">Всем сотрудникам (общая ссылка)</option><option value="me">Только мне (личная)</option></select></div>
+    <div class="hint" id="lScopeHint"></div>
+    <div class="row2">
+      <div class="field" id="rowGroup"><label>Группа</label><input id="lGroup" list="groupList" placeholder="Например: Мессенджеры"><datalist id="groupList"></datalist></div>
+      <div class="field" id="rowIcon"><label>Значок (эмодзи)</label><input id="lIcon" placeholder="🔗" maxlength="4"></div>
+    </div>
+    <div class="actions">
+      <button class="btn danger" type="button" id="lDel" hidden>Удалить</button>
+      <div class="spacer"></div>
+      <button class="btn" type="button" id="lCancel">Отмена</button>
+      <button class="btn primary" type="submit">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgStages">
+  <form method="dialog" class="dlg" id="formStages">
+    <h2>Стадии и amoCRM</h2>
+    <div class="field"><label>Адрес вашей amoCRM (для кнопок «Сделка в amoCRM» и напоминаний)</label><input id="sAmo" placeholder="https://ваша-компания.amocrm.ru/"></div>
+    <div class="field"><label>Текст напоминания</label><input id="sText" placeholder="поменяйте статус в amoCRM"></div>
+    <div class="field">
+      <label>Стадии по порядку. 🔔 — показывать напоминание сверху, когда человека переводят на эту стадию</label>
+      <div id="stageRows"></div>
+      <button class="btn" type="button" id="sAdd">+ Стадия</button>
+    </div>
+    <label class="remember"><input type="checkbox" id="sReg"> Разрешить сотрудникам самим регистрироваться</label>
+    <div class="actions">
+      <button class="btn" type="button" id="sCancel">Отмена</button>
+      <button class="btn primary" type="submit">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgUsers">
+  <div class="dlg">
+    <h2>Пользователи</h2>
+    <div id="usersList"></div>
+    <div class="hint">Сотрудник видит только своих людей и свои личные ссылки. Администратор видит всех людей и редактирует общие ссылки во вкладках «Таблицы» и «Программы».</div>
+    <div class="actions"><button class="btn primary" type="button" id="uClose">Готово</button></div>
+  </div>
+</dialog>
+
+
+<dialog id="appMessageDialog">
+  <form method="dialog" class="dlg" id="appMessageForm">
+    <h2 id="appMessageTitle">Подтверждение</h2>
+    <div class="message-text" id="appMessageText"></div>
+    <input id="appMessageInput" hidden autocomplete="off">
+    <div class="actions">
+      <button class="btn" id="appMessageCancel" type="button">Отмена</button>
+      <button class="btn primary" id="appMessageOk" type="submit">Продолжить</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  var KEY="moi_kontakty_v1", SKEY="moi_kontakty_session";
+  var COLORS=["#ff2e63","#ff8a00","#7c5cff","#19a974","#0e8fdd","#e83e8c","#f5532d","#2bb3a3"];
+  var MS={wa:"WhatsApp",tg:"Telegram",max:"MAX",vk:"VK"};
+  var DEFAULT_STAGES=["Новый","Связался","Переговоры","Оформление","Завершён","Отказ"];
+  var DEFAULT_SETTINGS={amoUrl:"",remindText:"поменяйте статус в amoCRM",remindStages:["Оформление"],allowReg:true};
+  var DEFAULT_LINKS={
+    sheets:[
+      {title:"Google Таблицы",url:"https://docs.google.com/spreadsheets/",note:"Все ваши таблицы из Google Диска",icon:"📊"},
+      {title:"Создать новую Google Таблицу",url:"https://sheets.new",note:"Пустая таблица одним нажатием",icon:"➕"},
+      {title:"Excel в браузере",url:"https://www.office.com/launch/excel",note:"Онлайн-версия, нужен аккаунт Microsoft",icon:"🟩"}
+    ],
+    apps:[
+      {group:"Мессенджеры",title:"Telegram",url:"tg://",note:"Программа на ПК",icon:"✈️"},
+      {group:"Мессенджеры",title:"Telegram Web",url:"https://web.telegram.org/",note:"В браузере",icon:"🌐"},
+      {group:"Мессенджеры",title:"WhatsApp",url:"whatsapp://",note:"Программа на ПК",icon:"💬"},
+      {group:"Мессенджеры",title:"WhatsApp Web",url:"https://web.whatsapp.com/",note:"В браузере",icon:"🌐"},
+      {group:"Мессенджеры",title:"VK Сообщения",url:"https://vk.com/im",note:"В браузере",icon:"🔵"},
+      {group:"Мессенджеры",title:"MAX",url:"https://max.ru/",note:"Сайт мессенджера",icon:"🟣"},
+      {group:"Office",title:"Excel",url:"ms-excel:",note:"Программа на ПК",icon:"📗"},
+      {group:"Office",title:"Word",url:"ms-word:",note:"Программа на ПК",icon:"📘"},
+      {group:"Office",title:"PowerPoint",url:"ms-powerpoint:",note:"Программа на ПК",icon:"📙"},
+      {group:"Другое",title:"Gmail",url:"https://mail.google.com/",note:"Почта в браузере",icon:"✉️"},
+      {group:"Другое",title:"Калькулятор",url:"calculator:",note:"Windows",icon:"🧮"},
+      {group:"Другое",title:"Параметры Windows",url:"ms-settings:",note:"Windows",icon:"⚙️"}
+    ]
+  };
+
+  var state={contacts:[],stages:DEFAULT_STAGES.slice(),links:null,users:[],settings:null,pending:[]};
+  var ui={me:null,tab:"home",stage:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",rows:[]};
+
+  var $=function(id){return document.getElementById(id)};
+  function uid(){return "x"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+  function clone(o){return JSON.parse(JSON.stringify(o))}
+  function isAdmin(){return !!(ui.me&&ui.me.role==="admin")}
+
+  /* ---------- хранение ---------- */
+  function seedLinks(){
+    var out={sheets:[],apps:[]};
+    ["sheets","apps"].forEach(function(k){DEFAULT_LINKS[k].forEach(function(d){var c=clone(d);c.id=uid();out[k].push(c)})});
+    return out;
+  }
+  function load(){
+    try{
+      var raw=localStorage.getItem(KEY);
+      if(raw){var d=JSON.parse(raw);
+        if(d&&Array.isArray(d.contacts)) state.contacts=d.contacts;
+        if(d&&Array.isArray(d.stages)&&d.stages.length) state.stages=d.stages;
+        if(d&&d.links&&Array.isArray(d.links.sheets)&&Array.isArray(d.links.apps)) state.links=d.links;
+        if(d&&Array.isArray(d.users)) state.users=d.users;
+        if(d&&d.settings) state.settings=d.settings;
+        if(d&&Array.isArray(d.pending)) state.pending=d.pending;}
+    }catch(e){}
+    if(!state.links) state.links=seedLinks();
+    var s=clone(DEFAULT_SETTINGS); Object.keys(state.settings||{}).forEach(function(k){s[k]=state.settings[k]});
+    if(!Array.isArray(s.remindStages)) s.remindStages=[];
+    state.settings=s;
+    save();
+  }
+  function save(){
+    try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast("Не удалось сохранить в браузере — сделайте копию вручную");}
+  }
+
+  /* ---------- общие помощники ---------- */
+  function esc(s){return String(s==null?"":s).replace(/[&<>"']/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function digits(p){
+    var d=String(p||"").replace(/\D/g,"");
+    if(d.length===11&&d.charAt(0)==="8") d="7"+d.slice(1);
+    return d;
+  }
+  function pretty(p){
+    var d=digits(p);
+    if(d.length===11&&d.charAt(0)==="7") return "+7 "+d.slice(1,4)+" "+d.slice(4,7)+"-"+d.slice(7,9)+"-"+d.slice(9);
+    return p||"";
+  }
+  function toast(t){var e=$("toast");e.textContent=t;e.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(function(){e.classList.remove("show")},3200)}
+
+  /* ---------- встроенные встроенные окна ввода и подтверждения ---------- */
+  function appMessage(options){
+    options=options||{};
+    return new Promise(function(resolve){
+      var dlg=$("appMessageDialog"), input=$("appMessageInput"), done=false;
+      $("appMessageTitle").textContent=options.title||"Подтверждение";
+      $("appMessageText").textContent=options.message||"";
+      input.hidden=!options.prompt;
+      input.type=options.password?"password":"text";
+      input.value=options.defaultValue||"";
+      input.placeholder=options.placeholder||"";
+      $("appMessageOk").textContent=options.okText||(options.prompt?"Сохранить":"Да");
+      $("appMessageCancel").textContent=options.cancelText||"Отмена";
+      $("appMessageCancel").hidden=options.allowCancel===false;
+      function finish(value){
+        if(done)return;
+        done=true;
+        dlg.removeEventListener("close",onClose);
+        if(dlg.open)dlg.close();
+        resolve(value);
+      }
+      function onClose(){finish(null)}
+      $("appMessageCancel").onclick=function(){finish(null)};
+      $("appMessageForm").onsubmit=function(e){
+        e.preventDefault();
+        finish(options.prompt?input.value:true);
+      };
+      dlg.addEventListener("close",onClose,{once:true});
+      dlg.showModal();
+      if(options.prompt)setTimeout(function(){input.focus();input.select()},40);
+      else $("appMessageOk").focus();
+    });
+  }
+  function appConfirm(message,title){
+    return appMessage({title:title||"Подтверждение",message:message,okText:"Да"});
+  }
+  function appPrompt(message,options){
+    options=options||{};
+    return appMessage({title:options.title||"Ввод данных",message:message,prompt:true,password:!!options.password,placeholder:options.placeholder||"",okText:options.okText||"Сохранить"});
+  }
+
+  function colorFor(s){var h=0;for(var i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return COLORS[h%COLORS.length]}
+  function stageColor(name){
+    var i=state.stages.indexOf(name); if(i<0) return {bg:"#8882",fg:"var(--muted)"};
+    var pal=[["#7c5cff"],["#0e8fdd"],["#ff8a00"],["#ff2e63"],["#19a974"],["#8a8fa8"]];
+    var c=pal[i%pal.length][0]; return {bg:c+"22",fg:c};
+  }
+  function fmtDate(t){
+    var d=new Date(t); return d.toLocaleDateString("ru-RU",{day:"numeric",month:"short"})+", "+d.toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"});
+  }
+  function copyText(txt,okMsg){
+    function fallback(){
+      try{
+        var ta=document.createElement("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";
+        document.body.appendChild(ta);ta.select();var ok=document.execCommand("copy");ta.remove();
+        toast(ok?okMsg:txt);
+      }catch(e){toast(txt)}
+    }
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(function(){toast(okMsg)},fallback);
+    }else fallback();
+  }
+  function userName(id){var u=state.users.filter(function(x){return x.id===id})[0];return u?u.name:"—"}
+
+  /* ---------- пароли: SHA-256 с солью ---------- */
+  var K=[0x428a2f98,0x71374491,0xb5c0fbcf,0xe9b5dba5,0x3956c25b,0x59f111f1,0x923f82a4,0xab1c5ed5,0xd807aa98,0x12835b01,0x243185be,0x550c7dc3,0x72be5d74,0x80deb1fe,0x9bdc06a7,0xc19bf174,0xe49b69c1,0xefbe4786,0x0fc19dc6,0x240ca1cc,0x2de92c6f,0x4a7484aa,0x5cb0a9dc,0x76f988da,0x983e5152,0xa831c66d,0xb00327c8,0xbf597fc7,0xc6e00bf3,0xd5a79147,0x06ca6351,0x14292967,0x27b70a85,0x2e1b2138,0x4d2c6dfc,0x53380d13,0x650a7354,0x766a0abb,0x81c2c92e,0x92722c85,0xa2bfe8a1,0xa81a664b,0xc24b8b70,0xc76c51a3,0xd192e819,0xd6990624,0xf40e3585,0x106aa070,0x19a4c116,0x1e376c08,0x2748774c,0x34b0bcb5,0x391c0cb3,0x4ed8aa4a,0x5b9cca4f,0x682e6ff3,0x748f82ee,0x78a5636f,0x84c87814,0x8cc70208,0x90befffa,0xa4506ceb,0xbef9a3f7,0xc67178f2];
+  function ror(x,n){return (x>>>n)|(x<<(32-n))}
+  function utf8(str){var s=unescape(encodeURIComponent(str)),a=[];for(var i=0;i<s.length;i++)a.push(s.charCodeAt(i));return a}
+  function sha256(str){
+    var b=utf8(str), H=[0x6a09e667,0xbb67ae85,0x3c6ef372,0xa54ff53a,0x510e527f,0x9b05688c,0x1f83d9ab,0x5be0cd19];
+    var bits=b.length*8; b.push(0x80); while(b.length%64!==56) b.push(0);
+    var hi=Math.floor(bits/0x100000000), lo=bits>>>0;
+    b.push((hi>>>24)&255,(hi>>>16)&255,(hi>>>8)&255,hi&255,(lo>>>24)&255,(lo>>>16)&255,(lo>>>8)&255,lo&255);
+    var w=new Array(64);
+    for(var off=0;off<b.length;off+=64){
+      var i;
+      for(i=0;i<16;i++) w[i]=(b[off+4*i]<<24)|(b[off+4*i+1]<<16)|(b[off+4*i+2]<<8)|b[off+4*i+3];
+      for(i=16;i<64;i++){
+        var s0=ror(w[i-15],7)^ror(w[i-15],18)^(w[i-15]>>>3), s1=ror(w[i-2],17)^ror(w[i-2],19)^(w[i-2]>>>10);
+        w[i]=(w[i-16]+s0+w[i-7]+s1)|0;
+      }
+      var a=H[0],bb=H[1],c=H[2],d=H[3],e=H[4],f=H[5],g=H[6],h=H[7];
+      for(i=0;i<64;i++){
+        var S1=ror(e,6)^ror(e,11)^ror(e,25), ch=(e&f)^(~e&g), t1=(h+S1+ch+K[i]+w[i])|0;
+        var S0=ror(a,2)^ror(a,13)^ror(a,22), mj=(a&bb)^(a&c)^(bb&c), t2=(S0+mj)|0;
+        h=g;g=f;f=e;e=(d+t1)|0;d=c;c=bb;bb=a;a=(t1+t2)|0;
+      }
+      H[0]=(H[0]+a)|0;H[1]=(H[1]+bb)|0;H[2]=(H[2]+c)|0;H[3]=(H[3]+d)|0;H[4]=(H[4]+e)|0;H[5]=(H[5]+f)|0;H[6]=(H[6]+g)|0;H[7]=(H[7]+h)|0;
+    }
+    return H.map(function(x){return ("00000000"+(x>>>0).toString(16)).slice(-8)}).join("");
+  }
+  function hashPw(pw,salt){var h=salt+":"+pw;for(var i=0;i<1500;i++)h=sha256(h);return h}
+  function randHex(n){
+    var s="";
+    try{var a=new Uint8Array(n);crypto.getRandomValues(a);for(var i=0;i<n;i++)s+=("0"+a[i].toString(16)).slice(-2);return s}catch(e){}
+    for(var j=0;j<n*2;j++)s+=Math.floor(Math.random()*16).toString(16);
+    return s;
+  }
+
+  /* ---------- учётные записи ---------- */
+  function findUser(login){login=String(login||"").trim().toLowerCase();return state.users.filter(function(u){return u.login===login})[0]}
+  function createUser(login,name,pw,role){
+    login=String(login||"").trim().toLowerCase();
+    if(login.length<3) return {err:"Логин — минимум 3 символа"};
+    if(/\s/.test(login)) return {err:"В логине не должно быть пробелов"};
+    if(findUser(login)) return {err:"Такой логин уже занят"};
+    if(String(pw||"").length<4) return {err:"Пароль — минимум 4 символа"};
+    var salt=randHex(16);
+    var u={id:uid(),login:login,name:String(name||"").trim()||login,salt:salt,hash:hashPw(pw,salt),role:role,created:Date.now()};
+    state.users.push(u); save();
+    return {user:u};
+  }
+  function tryLogin(mode,login,pw){
+    var u=findUser(login);
+    if(!u||u.hash!==hashPw(String(pw||""),u.salt)) return {err:"Неверный логин или пароль"};
+    if(mode==="admin"&&u.role!=="admin") return {err:"У этой учётной записи нет прав администратора"};
+    if(mode==="login"&&u.role==="admin") return {err:"Это администратор — войдите через вкладку «Администратор»"};
+    return {user:u};
+  }
+  function startSession(u,remember){
+    ui.me=u;
+    try{
+      (remember?localStorage:sessionStorage).setItem(SKEY,u.id);
+      (remember?sessionStorage:localStorage).removeItem(SKEY);
+    }catch(e){}
+  }
+  function endSession(){
+    ui.me=null;
+    try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
+  }
+
+  var AUTH_TEXT={
+    setup:{t:"Первый запуск",s:"Создайте учётную запись администратора. Она даёт право редактировать вкладки, стадии и пользователей.",b:"Создать и войти",h:"Запомните пароль: если администратор его забудет, восстановить доступ можно только очисткой данных приложения."},
+    login:{t:"Вход",s:"Войдите под своим логином.",b:"Войти",h:""},
+    register:{t:"Регистрация",s:"Создайте свой логин и пароль. Ваших людей будете видеть только вы и администратор.",b:"Зарегистрироваться",h:"Данные хранятся на этом компьютере."},
+    admin:{t:"Вход для администратора",s:"Специальный вход: после него доступно редактирование вкладок и настроек.",b:"Войти как администратор",h:""}
+  };
+  function showAuth(mode){
+    ui.authMode=mode;
+    var x=AUTH_TEXT[mode];
+    $("auth").hidden=false; $("appRoot").hidden=true;
+    $("authTitle").textContent=x.t; $("authSub").textContent=x.s; $("aSubmit").textContent=x.b; $("aHint").textContent=x.h;
+    $("authTabs").hidden=(mode==="setup");
+    $("tabReg").hidden=!state.settings.allowReg;
+    [].forEach.call(document.querySelectorAll("#authTabs button"),function(b){b.classList.toggle("on",b.getAttribute("data-m")===mode)});
+    var reg=(mode==="setup"||mode==="register");
+    $("aNameRow").hidden=!reg; $("aPass2Row").hidden=!reg;
+    $("aPass").value=""; $("aPass2").value=""; $("aErr").textContent="";
+    setTimeout(function(){$("aLogin").focus()},30);
+  }
+  [].forEach.call(document.querySelectorAll("#authTabs button"),function(b){
+    b.addEventListener("click",function(){showAuth(b.getAttribute("data-m"))});
+  });
+  $("authForm").addEventListener("submit",function(e){
+    e.preventDefault();
+    var m=ui.authMode, login=$("aLogin").value, pw=$("aPass").value, r;
+    function err(t){$("aErr").textContent=t}
+    if(m==="setup"||m==="register"){
+      if(m==="register"&&!state.settings.allowReg) return err("Регистрация закрыта администратором");
+      if(pw!==$("aPass2").value) return err("Пароли не совпадают");
+      r=createUser(login,$("aName").value,pw,m==="setup"?"admin":"user");
+      if(r.err) return err(r.err);
+      if(m==="setup"){state.contacts.forEach(function(c){if(!c.owner)c.owner=r.user.id});save()}
+    }else{
+      r=tryLogin(m,login,pw);
+      if(r.err) return err(r.err);
+    }
+    startSession(r.user,$("aRemember").checked);
+    $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";
+    enterApp();
+  });
+  function enterApp(){
+    $("auth").hidden=true; $("appRoot").hidden=false;
+    $("meChip").innerHTML='👤 '+esc(ui.me.name)+(isAdmin()?' <i>админ</i>':'');
+    ui.stage=""; setTab("home"); renderAlerts();
+  }
+  $("btnLogout").onclick=function(){
+    ["dlg","dlgLink","dlgStages","dlgUsers"].forEach(function(id){try{$(id).close()}catch(e){}});
+    endSession(); showAuth(state.users.length?"login":"setup");
+  };
+
+  /* ---------- ссылки на чаты ---------- */
+  function linkFor(c,k){
+    var d=digits(c.phone), h=(c.handles&&c.handles[k]||"").trim();
+    if(k==="wa") return d?"https://wa.me/"+d:null;
+    if(k==="tg"){
+      if(h){ if(/^https?:\/\//i.test(h)) return h; return "https://t.me/"+h.replace(/^@/,"").replace(/^t\.me\//i,""); }
+      return d?"https://t.me/+"+d:null;
+    }
+    if(k==="vk"){
+      if(!h) return null;
+      if(/^https?:\/\//i.test(h)) return h;
+      if(/^vk\.com\//i.test(h)) return "https://"+h;
+      return "https://vk.com/"+h.replace(/^@/,"");
+    }
+    if(k==="max"){
+      if(!h) return null;
+      if(/^https?:\/\//i.test(h)) return h;
+      if(/^max\.ru\//i.test(h)) return "https://"+h;
+      return null;
+    }
+    return null;
+  }
+
+  var ORDER=["wa","tg","max","vk"];
+  function mainChannel(c){
+    var sel=ORDER.filter(function(k){return c.channels&&c.channels[k]});
+    if(c.primary&&sel.indexOf(c.primary)>-1) return c.primary;
+    return sel.filter(function(k){return linkFor(c,k)})[0]||sel[0]||null;
+  }
+  function dealLink(c){
+    var d=String(c.deal||"").trim(); if(!d) return null;
+    if(/^https?:\/\//i.test(d)) return {url:d};
+    if(/^[a-z0-9.\-]+\.amocrm\.(ru|com)/i.test(d)) return {url:"https://"+d};
+    var id=d.replace(/\D/g,""); if(!id) return {err:"Не получилось разобрать сделку — вставьте ссылку или номер"};
+    var o="";
+    try{o=new URL(normalizeUrl(state.settings.amoUrl||"")).origin}catch(e){}
+    if(!o||o==="null") return {err:"Нужен адрес amoCRM — администратор указывает его в «Стадии и amoCRM»"};
+    return {url:o+"/leads/detail/"+id};
+  }
+  function goBtn(c,k,label,cls){
+    var l=linkFor(c,k);
+    return '<button class="go '+k+' '+cls+(l?"":" off")+'" data-act="go" data-k="'+k+'" data-id="'+c.id+'" title="'+(l?"Открыть личный чат":"Нужна ссылка на профиль — откройте «Изменить»")+'">'+label+'</button>';
+  }
+  function contactButtons(c){
+    var main=mainChannel(c), html="";
+    if(main) html+=goBtn(c,main,"Написать в "+MS[main]+" →","big");
+    var d=dealLink(c), okd=!!(d&&d.url);
+    html+='<button class="go deal'+(okd?"":" off")+'" data-act="deal" data-id="'+c.id+'" title="'+(okd?"Открыть сделку в amoCRM":"Добавьте ссылку или номер сделки в «Изменить»")+'">💼 Сделка в amoCRM</button>';
+    ORDER.forEach(function(k){if(k!==main&&c.channels&&c.channels[k]) html+=goBtn(c,k,MS[k]+" →","sm")});
+    if(!main) html='<span class="hint">Мессенджер не выбран</span>'+html;
+    return html;
+  }
+
+  /* ---------- открытие ссылок, таблиц и программ ---------- */
+  function isPath(u){return /^[a-zA-Z]:[\\\/]/.test(u)||u.indexOf("\\\\")===0||/^file:/i.test(u)}
+  function normalizeUrl(u){
+    u=String(u||"").trim(); if(!u) return "";
+    if(isPath(u)) return u;
+    if(/^[a-z][a-z0-9+.\-]*:/i.test(u)) return u;
+    if(/^[^\s\/]+\.[^\s\/]+/.test(u)) return "https://"+u;
+    return u;
+  }
+  function hostOf(u){
+    if(isPath(u)) return u;
+    if(/^https?:\/\//i.test(u)){try{return new URL(u).host}catch(e){}}
+    return u;
+  }
+  function openLink(u){
+    if(!u) return;
+    if(isPath(u)){
+      var p=u;
+      if(/^file:/i.test(p)){try{p=decodeURIComponent(p.replace(/^file:\/\/\/?/i,"")).replace(/\//g,"\\")}catch(e){}}
+      copyText(p,"Путь скопирован. Нажмите Win+R, вставьте путь и Enter");
+      return;
+    }
+    if(/^https?:\/\//i.test(u)){window.open(u,"_blank","noopener");return;}
+    var a=document.createElement("a");a.href=u;a.style.display="none";document.body.appendChild(a);a.click();
+    setTimeout(function(){a.remove()},300);
+    toast("Открываю… Если окно не появилось, программа не установлена");
+  }
+
+  /* ---------- напоминания про amoCRM ---------- */
+  function maybeRemind(c,oldStage){
+    if(c.stage===oldStage) return;
+    if(state.settings.remindStages.indexOf(c.stage)<0) return;
+    if(state.pending.some(function(p){return p.contactId===c.id&&p.stage===c.stage})) return;
+    state.pending.push({id:uid(),contactId:c.id,name:c.name||pretty(c.phone)||"Без имени",stage:c.stage,owner:c.owner,ts:Date.now()});
+    save(); renderAlerts();
+    try{window.scrollTo(0,0)}catch(e){}
+  }
+  function myPending(){return state.pending.filter(function(p){return isAdmin()||p.owner===(ui.me&&ui.me.id)})}
+  function renderAlerts(){
+    var list=myPending(), html="", shown=list.slice(-3).reverse();
+    shown.forEach(function(p){
+      html+='<div class="alert"><span class="ico">🔔</span>'+
+        '<div class="txt"><b>'+esc(p.stage)+'</b> — '+esc(p.name)+': '+esc(state.settings.remindText||DEFAULT_SETTINGS.remindText)+'</div>'+
+        (function(){var cc=state.contacts.filter(function(x){return x.id===p.contactId})[0],d=cc&&dealLink(cc);return d&&d.url?'<button class="btn" data-act="deal" data-id="'+esc(p.contactId)+'">Показать сделку</button>':''})()+
+        (state.settings.amoUrl?'<button class="btn" data-act="amo">Открыть amoCRM</button>':'')+
+        '<button class="btn ok" data-act="done" data-id="'+p.id+'">Готово, поменял ✓</button></div>';
+    });
+    if(list.length>shown.length) html+='<div class="alert"><span class="more">И ещё напоминаний: '+(list.length-shown.length)+'</span></div>';
+    $("alerts").innerHTML=html;
+  }
+  $("alerts").addEventListener("click",function(e){
+    var t=e.target.closest("[data-act]"); if(!t) return;
+    var act=t.getAttribute("data-act");
+    if(act==="amo") return openLink(normalizeUrl(state.settings.amoUrl));
+    if(act==="deal"){var cc=state.contacts.filter(function(x){return x.id===t.getAttribute("data-id")})[0],dl=cc&&dealLink(cc);if(dl&&dl.url)window.open(dl.url,"_blank","noopener");return;}
+    if(act==="done"){
+      var id=t.getAttribute("data-id");
+      state.pending=state.pending.filter(function(p){return p.id!==id});
+      save(); renderAlerts();
+    }
+  });
+
+  /* ---------- вкладки ---------- */
+  var ADD_LABEL={home:"+ Добавить человека",people:"+ Добавить человека",sheets:"+ Добавить таблицу",apps:"+ Добавить программу"};
+  function setTab(t){
+    ui.tab=t;
+    [].forEach.call(document.querySelectorAll(".tab"),function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});
+    [].forEach.call(document.querySelectorAll(".view"),function(v){v.classList.toggle("on",v.id==="v-"+t)});
+    [].forEach.call(document.querySelectorAll("[data-tabs],[data-admin]"),function(b){
+      var tabs=b.getAttribute("data-tabs"), hide=false;
+      if(tabs&&tabs.split(" ").indexOf(t)<0) hide=true;
+      if(b.hasAttribute("data-admin")&&!isAdmin()) hide=true;
+      b.hidden=hide;
+    });
+    $("btnAdd").textContent=ADD_LABEL[t];
+    $("btnAdd").hidden=(t==="home");
+    render();
+  }
+  function render(){
+    if(ui.tab==="sheets") renderSheets();
+    else if(ui.tab==="apps") renderApps();
+    else if(ui.tab==="people") renderHome();
+    else renderDashboard();
+  }
+
+  /* ---------- главная ---------- */
+  function mine(){return state.contacts.filter(function(c){return isAdmin()||c.owner===ui.me.id})}
+  function filtered(){
+    var q=$("q").value.trim().toLowerCase(), m=$("fMsgr").value, qd=digits(q), ow=isAdmin()?$("fOwner").value:"";
+    var list=mine().filter(function(c){
+      if(ow&&c.owner!==ow) return false;
+      if(ui.stage&&c.stage!==ui.stage) return false;
+      if(m&&!(c.channels&&c.channels[m])) return false;
+      if(!q) return true;
+      var hay=((c.name||"")+" "+(c.notes||"")+" "+(c.phone||"")).toLowerCase();
+      if(hay.indexOf(q)>-1) return true;
+      return qd.length>2&&digits(c.phone).indexOf(qd)>-1;
+    });
+    var s=$("fSort").value;
+    list.sort(function(a,b){
+      if(s==="name") return (a.name||"").localeCompare(b.name||"","ru");
+      if(s==="stage") return state.stages.indexOf(a.stage)-state.stages.indexOf(b.stage)||b.updated-a.updated;
+      return b.updated-a.updated;
+    });
+    return list;
+  }
+
+  function renderHome(){
+    var all=mine();
+    $("sub").textContent=all.length?("Всего людей: "+all.length):"Пока никого нет";
+    if(isAdmin()){
+      var cur=$("fOwner").value;
+      $("fOwner").innerHTML='<option value="">Все сотрудники</option>'+state.users.map(function(u){return '<option value="'+esc(u.id)+'"'+(u.id===cur?" selected":"")+'>'+esc(u.name)+'</option>'}).join("");
+    }
+    var counts={};all.forEach(function(c){counts[c.stage]=(counts[c.stage]||0)+1});
+    var ch='<button class="chip'+(ui.stage===""?" on":"")+'" data-st="">Все <b>'+all.length+'</b></button>';
+    state.stages.forEach(function(s){
+      ch+='<button class="chip'+(ui.stage===s?" on":"")+'" data-st="'+esc(s)+'">'+esc(s)+' <b>'+(counts[s]||0)+'</b></button>';
+    });
+    $("chips").innerHTML=ch;
+
+    var list=filtered(), html="";
+    if(!list.length){
+      html='<div class="empty" style="grid-column:1/-1"><span class="big">🛴</span><h2>'+(all.length?"Ничего не найдено":"Добавьте первого человека")+'</h2>'+
+           (all.length?"Попробуйте изменить поиск или фильтр":"Нажмите «+ Добавить человека», впишите номер, отметьте мессенджер и стадию")+'</div>';
+    }
+    list.forEach(function(c){
+      var name=c.name||pretty(c.phone)||"Без имени";
+      var sc=stageColor(c.stage);
+      var btns=contactButtons(c);
+      var opts=state.stages.slice(); if(opts.indexOf(c.stage)<0) opts.push(c.stage);
+      var stageSel='<span class="stagewrap" style="background:'+sc.bg+';color:'+sc.fg+'"><select data-act="stage" data-id="'+c.id+'" title="Сменить стадию">'+
+        opts.map(function(o){return '<option'+(o===c.stage?' selected':'')+'>'+esc(o)+'</option>'}).join("")+'</select></span>';
+      html+='<div class="card" data-id="'+c.id+'">'+
+        '<div class="card-top"><div class="avatar" style="background:'+colorFor(name)+'">'+esc(name.trim().charAt(0).toUpperCase()||"?")+'</div>'+
+        '<div class="who"><div class="name">'+esc(name)+'</div><div class="phone" data-act="copy" data-id="'+c.id+'" title="Нажмите, чтобы скопировать">'+esc(pretty(c.phone)||"без номера")+'</div></div>'+
+        stageSel+'</div>'+
+        (c.notes?'<div class="notes">'+esc(c.notes)+'</div>':'')+
+        '<div class="chat">'+btns+'</div>'+
+        '<div class="card-foot"><span class="date">Обновлено '+fmtDate(c.updated)+(isAdmin()&&c.owner?' · '+esc(userName(c.owner)):'')+'</span><button class="icon" data-act="edit" data-id="'+c.id+'">Изменить</button></div>'+
+      '</div>';
+    });
+    $("list").innerHTML=html;
+  }
+
+  /* ---------- главная: панель ---------- */
+  var FINAL_RX=/заверш|отказ|закрыт|архив/i;
+  function plural(n,f){var a=Math.abs(n)%100,b=a%10;if(a>10&&a<20)return f[2];if(b>1&&b<5)return f[1];if(b===1)return f[0];return f[2]}
+  function greeting(){var h=new Date().getHours();return h>=5&&h<12?"Доброе утро":h>=12&&h<18?"Добрый день":h>=18&&h<23?"Добрый вечер":"Доброй ночи"}
+  function daysAgo(t){return Math.max(0,Math.floor((Date.now()-t)/864e5))}
+  function stalePeople(all){
+    return all.filter(function(c){return !FINAL_RX.test(c.stage||"")&&daysAgo(c.updated||0)>=3}).sort(function(a,b){return (a.updated||0)-(b.updated||0)});
+  }
+  function chatBtn(c){var k=mainChannel(c);return k?'<button class="go '+k+' sm" data-act="chat" data-id="'+c.id+'" title="Открыть чат">'+MS[k]+' →</button>':''}
+  function personRow(c,sub){
+    var name=c.name||pretty(c.phone)||"Без имени", sc=stageColor(c.stage);
+    return '<div class="drow" data-act="edit" data-id="'+c.id+'"><div class="avatar" style="background:'+colorFor(name)+'">'+esc(name.trim().charAt(0).toUpperCase()||"?")+'</div>'+
+      '<div class="who"><div class="nm">'+esc(name)+'</div><div class="sb"><span class="pill" style="background:'+sc.bg+';color:'+sc.fg+'">'+esc(c.stage)+'</span>'+sub+'</div></div>'+
+      chatBtn(c)+'</div>';
+  }
+  function stat(ico,num,lbl,cls,act){
+    return '<div class="stat rise'+(cls?' '+cls:'')+'"'+(act?' data-act="'+act+'" style="cursor:pointer"':'')+'><div class="ico">'+ico+'</div><div class="num">'+num+'</div><div class="lbl">'+lbl+'</div></div>';
+  }
+  function renderDashboard(){
+    var all=mine(), week=Date.now()-7*864e5, stale=stalePeople(all), pend=myPending();
+    var fresh=all.filter(function(c){return (c.created||c.updated||0)>=week}).length;
+    $("sub").textContent=all.length?("Всего людей: "+all.length):"Пока никого нет";
+    var d=new Date().toLocaleDateString("ru-RU",{weekday:"long",day:"numeric",month:"long"}); d=d.charAt(0).toUpperCase()+d.slice(1);
+    var first=String(ui.me.name||"").trim().split(" ")[0];
+    var sum;
+    if(all.length){
+      sum="В списке "+all.length+" "+plural(all.length,["человек","человека","человек"]);
+      if(pend.length) sum+=" · ждут обновления в amoCRM: "+pend.length;
+      if(stale.length) sum+=" · давно без касания: "+stale.length;
+      sum+=(pend.length||stale.length)?".":" — всё под контролем 🎉";
+    }else sum="Добавьте первого человека, и здесь появится ваша воронка.";
+
+    var html='<div class="hero rise"><div class="hi"><div class="date">'+esc(d)+'</div><h2>'+greeting()+(first?', '+esc(first):'')+' 👋</h2><p>'+esc(sum)+'</p>'+
+      '<div class="acts"><button class="btn primary" data-act="add">+ Добавить человека</button><button class="btn" data-act="people">Все люди →</button></div></div><div class="art">🛴</div></div>';
+
+    html+='<div class="stats">'+
+      stat("👥",all.length,"Всего людей","","people")+
+      stat("✨",fresh,"Добавлено за неделю","","people")+
+      stat("🔔",pend.length,"Ждут обновления в amoCRM",pend.length?"warn":"","")+
+      stat("⏳",stale.length,"Давно без касания (3+ дня)","","")+'</div>';
+
+    // воронка
+    var names=state.stages.slice(); all.forEach(function(c){if(names.indexOf(c.stage)<0)names.push(c.stage)});
+    var counts=names.map(function(n){return all.filter(function(c){return c.stage===n}).length});
+    var max=Math.max.apply(null,counts.concat([1]));
+    var funnel=all.length?names.map(function(n,i){
+      var k=counts[i], w=k?Math.max(4,Math.round(k/max*100)):0, pct=Math.round(k/all.length*100);
+      return '<div class="frow" data-act="stage" data-st="'+esc(n)+'" title="Показать людей на этой стадии"><div class="fl">'+esc(n)+'</div>'+
+        '<div class="track"><div class="fill" style="width:'+w+'%;'+(k?'':'min-width:0;')+'background:'+stageColor(n).fg+'"></div></div>'+
+        '<div class="fc">'+k+'<small>'+pct+'%</small></div></div>';
+    }).join(""):'<div class="dempty">Пока пусто. Добавьте первого человека — и здесь появится воронка по стадиям.</div>';
+
+    // внимание и последние
+    var att=stale.slice(0,5).map(function(c){var n=daysAgo(c.updated||0);return personRow(c,n+' '+plural(n,["день","дня","дней"])+' без касания')}).join("");
+    var recent=all.slice().sort(function(a,b){return (b.updated||0)-(a.updated||0)}).slice(0,5).map(function(c){return personRow(c,esc(fmtDate(c.updated)))}).join("");
+    // быстрый доступ
+    var qa=visibleLinks("apps","").slice(0,8).map(function(x){
+      return '<div class="q" data-act="open" data-id="'+x.id+'" title="'+esc(x.url)+'"><span>'+esc(x.icon||"🔗")+'</span>'+esc(x.title||hostOf(x.url))+'</div>';
+    }).join("");
+
+    html+='<div class="dcols">'+
+      '<div class="dcard rise"><h3>📈 Воронка<small>по стадиям</small></h3>'+funnel+'</div>'+
+      '<div class="dcard rise"><h3>⏳ Требует внимания<small>'+(stale.length||"")+'</small></h3>'+(att||'<div class="dempty">Все на связи — никого не пропустили 🎉</div>')+
+        (stale.length>5?'<button class="link" data-act="people">Показать всех ('+stale.length+') →</button>':'')+'</div>'+
+      '<div class="dcard rise"><h3>🕒 Последние</h3>'+(recent||'<div class="dempty">Здесь появятся люди, с которыми вы работали</div>')+'</div>'+
+      '<div class="dcard rise"><h3>🚀 Быстрый доступ<small><button class="link" data-act="tab" data-tab="apps">Все →</button></small></h3>'+
+        (qa?'<div class="qa">'+qa+'</div>':'<div class="dempty">Добавьте программы во вкладке «Программы»</div>')+'</div>';
+
+    if(isAdmin()&&state.users.length>1){
+      var cnt=state.users.map(function(u){return {u:u,n:state.contacts.filter(function(c){return c.owner===u.id}).length}});
+      var mx=Math.max.apply(null,cnt.map(function(x){return x.n}).concat([1])), total=Math.max(1,state.contacts.length);
+      html+='<div class="dcard rise" style="grid-column:1/-1"><h3>🧑‍💼 По сотрудникам<small>видно только администратору</small></h3>'+
+        cnt.map(function(x){
+          return '<div class="frow static"><div class="fl">'+esc(x.u.name)+'</div><div class="track"><div class="fill" style="width:'+(x.n?Math.max(4,Math.round(x.n/mx*100)):0)+'%;'+(x.n?'':'min-width:0;')+'background:'+colorFor(x.u.name)+'"></div></div><div class="fc">'+x.n+'<small>'+Math.round(x.n/total*100)+'%</small></div></div>';
+        }).join("")+'</div>';
+    }
+    html+='</div>';
+    $("dash").innerHTML=html;
+  }
+
+  $("dash").addEventListener("click",function(e){
+    var t=e.target.closest("[data-act]"); if(!t) return;
+    var act=t.getAttribute("data-act"), id=t.getAttribute("data-id");
+    if(act==="add") return openEdit(null);
+    if(act==="people"){ui.stage="";return setTab("people");}
+    if(act==="tab") return setTab(t.getAttribute("data-tab"));
+    if(act==="stage"){ui.stage=t.getAttribute("data-st");return setTab("people");}
+    if(act==="open"){var x=findLink("apps",id);return x&&openLink(x.url);}
+    var c=getContact(id); if(!c) return;
+    if(act==="edit") return openEdit(id);
+    if(act==="chat"){
+      var k=mainChannel(c), l=k&&linkFor(c,k);
+      if(!l) return toast("Откройте карточку и добавьте ссылку на профиль");
+      c.updated=Date.now(); save(); window.open(l,"_blank","noopener"); render();
+    }
+  });
+
+  /* ---------- таблицы и программы: общие и личные ---------- */
+  function matchLink(x,q){return !q||((x.title||"")+" "+(x.note||"")+" "+(x.url||"")+" "+(x.group||"")).toLowerCase().indexOf(q)>-1}
+  function findLink(kind,id){return state.links[kind].filter(function(x){return x.id===id})[0]}
+  function canEditLink(x){return x.owner?!!(ui.me&&x.owner===ui.me.id):isAdmin()}
+  function visibleLinks(kind,q){
+    return state.links[kind].filter(function(x){return (!x.owner||x.owner===ui.me.id)&&matchLink(x,q||"")});
+  }
+  function secHead(icon,title,note){return '<div class="sec">'+icon+' '+esc(title)+' <small>'+esc(note)+'</small></div>'}
+  function emptyMsg(items,icon,t1,t2){
+    return '<div class="empty" style="grid-column:1/-1"><span class="big">'+icon+'</span><h2>'+(items.length?"Ничего не найдено":t1)+'</h2>'+(items.length?"Попробуйте другой запрос":t2)+'</div>';
+  }
+  function sharedEmpty(){
+    return isAdmin()?"Добавьте общие ссылки кнопкой «+ Добавить таблицу» (в окне выберите «Всем сотрудникам»)":"Администратор пока ничего не добавил";
+  }
+
+  function sheetCard(x){
+    return '<div class="card" data-id="'+x.id+'">'+
+      '<div class="card-top"><div class="avatar emoji">'+esc(x.icon||"📊")+'</div>'+
+      '<div class="who"><div class="name">'+esc(x.title||hostOf(x.url))+'</div><div class="host">'+esc(hostOf(x.url))+'</div></div></div>'+
+      (x.note?'<div class="notes">'+esc(x.note)+'</div>':'')+
+      '<div class="chat"><button class="go pink" data-act="open" data-id="'+x.id+'">'+(isPath(x.url)?"Скопировать путь":"Открыть →")+'</button>'+
+      (isPath(x.url)?'':'<button class="go off" data-act="copy" data-id="'+x.id+'">Копировать ссылку</button>')+'</div>'+
+      '<div class="card-foot"><span class="date"></span>'+(canEditLink(x)?'<button class="icon" data-act="edit" data-id="'+x.id+'">Изменить</button>':'')+'</div>'+
+    '</div>';
+  }
+  function renderSheets(){
+    var q=$("qSheets").value.trim().toLowerCase(), list=visibleLinks("sheets",q);
+    var shared=list.filter(function(x){return !x.owner}), personal=list.filter(function(x){return x.owner});
+    var total=visibleLinks("sheets","").length;
+    $("sub").textContent=total?("Таблиц и ссылок: "+total):"Пока пусто";
+    var html="";
+    if(q&&!list.length){html=emptyMsg([1],"📊","","");}
+    else{
+      if(shared.length||!q) html+=secHead("🌐","Общие","Для всех сотрудников"+(isAdmin()?" — их редактируете вы":""));
+      if(shared.length) html+=shared.map(sheetCard).join(""); else if(!q) html+='<div class="hint">'+esc(sharedEmpty())+'</div>';
+      if(personal.length||!q) html+=secHead("👤","Мои","Личные ссылки — видите только вы");
+      html+=personal.map(sheetCard).join("");
+      if(!q) html+='<div class="card add" data-act="add"><span class="plus">+</span>Добавить свою таблицу или ссылку</div>';
+    }
+    $("listSheets").innerHTML=html;
+  }
+
+  function tileHtml(x){
+    return '<div class="tile" data-act="open" data-id="'+x.id+'" title="'+esc(x.url)+'">'+
+      (canEditLink(x)?'<button class="icon edit" data-act="edit" data-id="'+x.id+'">Изменить</button>':'')+
+      '<div class="ic">'+esc(x.icon||"🔗")+'</div><div class="tt">'+esc(x.title||hostOf(x.url))+'</div><div class="sub">'+esc(x.note||"")+'</div></div>';
+  }
+  function renderApps(){
+    var q=$("qApps").value.trim().toLowerCase(), list=visibleLinks("apps",q);
+    var shared=list.filter(function(x){return !x.owner}), personal=list.filter(function(x){return x.owner});
+    var total=visibleLinks("apps","").length;
+    $("sub").textContent=total?("Программ и сайтов: "+total):"Пока пусто";
+    var html="";
+    if(q&&!list.length){html=emptyMsg([1],"🚀","","");}
+    else{
+      if(shared.length||!q) html+=secHead("🌐","Общие","Для всех сотрудников"+(isAdmin()?" — их редактируете вы":""));
+      if(shared.length){
+        var groups=[],map={};
+        shared.forEach(function(x){var g=x.group||"Другое";if(!map[g]){map[g]=[];groups.push(g)}map[g].push(x)});
+        groups.forEach(function(g){html+='<div class="gh">'+esc(g)+'</div><div class="tiles">'+map[g].map(tileHtml).join("")+'</div>'});
+      }else if(!q) html+='<div class="hint" style="margin:6px 4px">'+esc(sharedEmpty())+'</div>';
+      if(personal.length||!q){
+        html+=secHead("👤","Мои","Личные программы и сайты — видите только вы");
+        html+='<div class="tiles">'+personal.map(tileHtml).join("")+(!q?'<div class="tile add" data-act="add"><span class="plus">+</span>Добавить свою</div>':'')+'</div>';
+      }
+    }
+    $("listApps").innerHTML=html;
+  }
+
+  function onLinkClick(kind){
+    return function(e){
+      var t=e.target.closest("[data-act]"); if(!t) return;
+      var act=t.getAttribute("data-act");
+      if(act==="add") return openLinkDlg(kind,null,"me");
+      var id=t.getAttribute("data-id"), x=findLink(kind,id); if(!x) return;
+      if(act==="edit") return canEditLink(x)&&openLinkDlg(kind,id);
+      if(act==="copy") return copyText(x.url,"Ссылка скопирована");
+      if(act==="open") return openLink(x.url);
+    };
+  }
+
+  function syncScope(){
+    var apps=ui.linkKind==="apps", sc=isAdmin()?$("lScope").value:"me";
+    $("rowGroup").hidden=!(apps&&sc==="all"); $("rowIcon").hidden=!apps;
+  }
+  function openLinkDlg(kind,id,startScope){
+    ui.linkKind=kind; ui.linkId=id||null;
+    var it=id?findLink(kind,id):null, apps=kind==="apps";
+    if(it&&!canEditLink(it)) return;
+    var scope=it?(it.owner?"me":"all"):(isAdmin()?(startScope||"all"):"me");
+    $("lHead").textContent=apps?(it?"Изменить программу":"Новая программа"):(it?"Изменить таблицу":"Новая таблица");
+    $("lUrlLabel").textContent=apps?"Адрес сайта или команда программы":"Ссылка на таблицу или путь к файлу";
+    $("lUrl").placeholder=apps?"https://…  или  tg://  или  ms-excel:":"https://docs.google.com/…  или  C:\\Таблицы\\продажи.xlsx";
+    $("lUrlHint").textContent=apps
+      ?"Для сайтов — обычная ссылка. Для программ — команда вроде tg:// (Telegram), ms-excel: (Excel). Путь к .exe-файлу тоже можно вставить: он скопируется, дальше Win+R, вставить, Enter."
+      :"Для файла на компьютере вставьте путь: по кнопке он скопируется — нажмите Win+R, вставьте и Enter, файл откроется в Excel.";
+    $("rowScope").hidden=!isAdmin(); $("lScope").value=scope;
+    $("lScopeHint").textContent=isAdmin()?"":"Эту ссылку увидите только вы.";
+    $("groupList").innerHTML=Object.keys(state.links.apps.reduce(function(a,x){if(!x.owner)a[x.group||"Другое"]=1;return a},{})).map(function(g){return '<option value="'+esc(g)+'">'}).join("");
+    $("lTitle").value=it?it.title||"":"";
+    $("lUrl").value=it?it.url||"":"";
+    $("lNote").value=it?it.note||"":"";
+    $("lGroup").value=it?it.group||"":"";
+    $("lIcon").value=it?it.icon||"":"";
+    $("lDel").hidden=!it;
+    syncScope();
+    $("dlgLink").showModal();
+    setTimeout(function(){$("lTitle").focus()},30);
+  }
+  $("lScope").addEventListener("change",syncScope);
+
+  $("formLink").addEventListener("submit",function(e){
+    var url=normalizeUrl($("lUrl").value), kind=ui.linkKind;
+    if(!url){e.preventDefault();toast("Вставьте ссылку или путь");return;}
+    var scope=isAdmin()?$("lScope").value:"me";
+    var it=ui.linkId?findLink(kind,ui.linkId):null;
+    if(it&&!canEditLink(it)){e.preventDefault();return;}
+    var data={title:$("lTitle").value.trim()||hostOf(url),url:url,note:$("lNote").value.trim()};
+    if(kind==="apps"){data.group=scope==="all"?($("lGroup").value.trim()||"Другое"):"";data.icon=$("lIcon").value.trim()||"🔗";}
+    else data.icon="📊";
+    if(it){
+      Object.keys(data).forEach(function(k){it[k]=data[k]});
+      if(scope==="me") it.owner=ui.me.id; else delete it.owner;
+    }else{
+      data.id=uid(); if(scope==="me") data.owner=ui.me.id;
+      state.links[kind].push(data);
+    }
+    save(); render(); toast("Сохранено");
+  });
+  $("lCancel").onclick=function(){$("dlgLink").close()};
+  $("lDel").onclick=async function(){
+    var it=ui.linkId?findLink(ui.linkKind,ui.linkId):null;
+    if(!it||!canEditLink(it)) return;
+    if(await appConfirm("Удалить эту ссылку?","Удаление ссылки")){
+      state.links[ui.linkKind]=state.links[ui.linkKind].filter(function(x){return x.id!==ui.linkId});
+      save(); render(); $("dlgLink").close(); toast("Удалено");
+    }
+  };
+  $("btnRestore").onclick=function(){
+    if(!isAdmin()) return;
+    var kind=ui.tab==="apps"?"apps":"sheets";
+    var have=state.links[kind].filter(function(x){return !x.owner}).map(function(x){return x.url}), added=0;
+    DEFAULT_LINKS[kind].forEach(function(d){
+      if(have.indexOf(d.url)<0){var c=clone(d);c.id=uid();state.links[kind].push(c);added++}
+    });
+    save(); render(); toast(added?("Добавлено стандартных: "+added):"Все стандартные уже на месте");
+  };
+  $("listSheets").addEventListener("click",onLinkClick("sheets"));
+  $("listApps").addEventListener("click",onLinkClick("apps"));
+  $("qSheets").addEventListener("input",render);
+  $("qApps").addEventListener("input",render);
+
+  /* ---------- окно контакта ---------- */
+  function fillStageSelect(sel,val){
+    var all=state.stages.slice(); if(val&&all.indexOf(val)<0) all.push(val);
+    $("fStage").innerHTML=all.map(function(s){return '<option'+(s===sel?" selected":"")+'>'+esc(s)+'</option>'}).join("");
+  }
+  function syncHandles(){
+    [["cTg","hTg"],["cMax","hMax"],["cVk","hVk"]].forEach(function(p){$(p[1]).disabled=!$(p[0]).checked});
+  }
+  function fillPrimary(val){
+    var cur=(val!==undefined)?val:$("fPrimary").value;
+    var sel=[["wa","cWa"],["tg","cTg"],["max","cMax"],["vk","cVk"]].filter(function(p){return $(p[1]).checked});
+    $("fPrimary").innerHTML='<option value="">Авто (первая из выбранных)</option>'+sel.map(function(p){return '<option value="'+p[0]+'"'+(p[0]===cur?" selected":"")+'>'+MS[p[0]]+'</option>'}).join("");
+  }
+  ["cWa","cTg","cMax","cVk"].forEach(function(id){$(id).addEventListener("change",function(){syncHandles();fillPrimary()})});
+
+  function getContact(id){return mine().filter(function(x){return x.id===id})[0]}
+  function openEdit(id){
+    ui.editId=id||null;
+    var c=id?getContact(id):null;
+    $("dTitle").textContent=c?"Изменить контакт":"Новый контакт";
+    $("bDel").hidden=!c;
+    $("fName").value=c?c.name:"";
+    $("fPhone").value=c?c.phone:"";
+    var ch=(c&&c.channels)||{}, h=(c&&c.handles)||{};
+    $("cWa").checked=!!ch.wa; $("cTg").checked=!!ch.tg; $("cMax").checked=!!ch.max; $("cVk").checked=!!ch.vk;
+    $("hTg").value=h.tg||""; $("hMax").value=h.max||""; $("hVk").value=h.vk||"";
+    fillStageSelect(c?c.stage:state.stages[0], c&&c.stage);
+    $("fNotes").value=c?c.notes:"";
+    $("fDeal").value=c?c.deal||"":"";
+    syncHandles(); fillPrimary(c?c.primary||"":"");
+    $("dlg").showModal();
+    setTimeout(function(){$("fName").focus()},30);
+  }
+
+  $("form").addEventListener("submit",function(e){
+    var name=$("fName").value.trim(), phone=$("fPhone").value.trim();
+    if(!name&&!phone){e.preventDefault();toast("Укажите имя или номер");return;}
+    var data={
+      name:name, phone:phone,
+      channels:{wa:$("cWa").checked,tg:$("cTg").checked,max:$("cMax").checked,vk:$("cVk").checked},
+      handles:{tg:$("hTg").value.trim(),max:$("hMax").value.trim(),vk:$("hVk").value.trim()},
+      primary:$("fPrimary").value, deal:$("fDeal").value.trim(),
+      stage:$("fStage").value, notes:$("fNotes").value.trim(), updated:Date.now()
+    };
+    var c, oldStage=null;
+    if(ui.editId){
+      c=getContact(ui.editId); if(!c){return}
+      oldStage=c.stage;
+      Object.keys(data).forEach(function(k){c[k]=data[k]});
+    }else{
+      data.id="c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+      data.created=Date.now(); data.owner=ui.me.id; state.contacts.push(data); c=data;
+    }
+    save(); maybeRemind(c,oldStage); render(); toast("Сохранено");
+  });
+  $("bCancel").onclick=function(){$("dlg").close()};
+  $("bDel").onclick=async function(){
+    if(!ui.editId) return;
+    if(await appConfirm("Удалить этот контакт насовсем?","Удаление контакта")){
+      var id=ui.editId;
+      state.contacts=state.contacts.filter(function(x){return x.id!==id});
+      state.pending=state.pending.filter(function(p){return p.contactId!==id});
+      save(); renderAlerts(); render(); $("dlg").close(); toast("Удалено");
+    }
+  };
+
+  $("btnAdd").onclick=function(){
+    if(ui.tab==="sheets") openLinkDlg("sheets",null);
+    else if(ui.tab==="apps") openLinkDlg("apps",null);
+    else openEdit(null);
+  };
+  [].forEach.call(document.querySelectorAll(".tab"),function(b){
+    b.addEventListener("click",function(){setTab(b.getAttribute("data-tab"))});
+  });
+  $("q").addEventListener("input",render);
+  $("fOwner").addEventListener("change",render);
+  $("fMsgr").addEventListener("change",render);
+  $("fSort").addEventListener("change",render);
+
+  $("chips").addEventListener("click",function(e){
+    var b=e.target.closest(".chip"); if(!b) return;
+    ui.stage=b.getAttribute("data-st"); render();
+  });
+  $("list").addEventListener("click",function(e){
+    var t=e.target.closest("[data-act]"); if(!t) return;
+    var id=t.getAttribute("data-id"), act=t.getAttribute("data-act");
+    var c=getContact(id); if(!c) return;
+    if(act==="edit") return openEdit(id);
+    if(act==="copy") return copyText(c.phone||"","Номер скопирован");
+    if(act==="deal"){
+      var dl=dealLink(c);
+      if(!dl) return toast("Добавьте ссылку или номер сделки в «Изменить»");
+      if(dl.err) return toast(dl.err);
+      window.open(dl.url,"_blank","noopener"); return;
+    }
+    if(act==="go"){
+      var k=t.getAttribute("data-k"), l=linkFor(c,k);
+      if(!l){
+        if(k==="max"&&c.phone) copyText(c.phone,"Номер скопирован. Для прямого перехода добавьте ссылку на профиль MAX");
+        else toast("Добавьте ссылку на профиль в «Изменить»");
+        return;
+      }
+      c.updated=Date.now(); save();
+      window.open(l,"_blank","noopener");
+    }
+  });
+  $("list").addEventListener("change",function(e){
+    var t=e.target;
+    if(!t||t.getAttribute("data-act")!=="stage") return;
+    var c=getContact(t.getAttribute("data-id")); if(!c) return;
+    var old=c.stage; c.stage=t.value; c.updated=Date.now();
+    save(); maybeRemind(c,old); render();
+  });
+
+  /* ---------- стадии и amoCRM (админ) ---------- */
+  function renderStageRows(){
+    $("stageRows").innerHTML=ui.rows.map(function(r,i){
+      return '<div class="srow" data-i="'+i+'"><input type="text" data-f="name" value="'+esc(r.name)+'" placeholder="Название стадии">'+
+        '<label class="bell" title="Показывать напоминание про amoCRM"><input type="checkbox" data-f="remind"'+(r.remind?" checked":"")+'>🔔</label>'+
+        '<button type="button" class="mini" data-act="up" title="Выше">↑</button><button type="button" class="mini" data-act="down" title="Ниже">↓</button><button type="button" class="mini" data-act="del" title="Удалить">✕</button></div>';
+    }).join("");
+  }
+  $("btnStages").onclick=function(){
+    if(!isAdmin()) return;
+    ui.rows=state.stages.map(function(s){return {orig:s,name:s,remind:state.settings.remindStages.indexOf(s)>-1}});
+    $("sAmo").value=state.settings.amoUrl||"";
+    $("sText").value=state.settings.remindText||"";
+    $("sReg").checked=!!state.settings.allowReg;
+    renderStageRows(); $("dlgStages").showModal();
+  };
+  $("stageRows").addEventListener("click",function(e){
+    var t=e.target.closest("[data-act]"); if(!t) return;
+    var row=t.closest(".srow"); if(!row) return;
+    var i=+row.getAttribute("data-i"), act=t.getAttribute("data-act");
+    if(act==="del") ui.rows.splice(i,1);
+    else if(act==="up"&&i>0){var a=ui.rows[i];ui.rows[i]=ui.rows[i-1];ui.rows[i-1]=a}
+    else if(act==="down"&&i<ui.rows.length-1){var b=ui.rows[i];ui.rows[i]=ui.rows[i+1];ui.rows[i+1]=b}
+    renderStageRows();
+  });
+  $("stageRows").addEventListener("input",function(e){
+    var row=e.target.closest(".srow"); if(!row||e.target.getAttribute("data-f")!=="name") return;
+    ui.rows[+row.getAttribute("data-i")].name=e.target.value;
+  });
+  $("stageRows").addEventListener("change",function(e){
+    var row=e.target.closest(".srow"); if(!row||e.target.getAttribute("data-f")!=="remind") return;
+    ui.rows[+row.getAttribute("data-i")].remind=e.target.checked;
+  });
+  $("sAdd").onclick=function(){ui.rows.push({orig:null,name:"",remind:false});renderStageRows()};
+  $("sCancel").onclick=function(){$("dlgStages").close()};
+  $("formStages").addEventListener("submit",function(e){
+    if(!isAdmin()){e.preventDefault();return;}
+    var rows=ui.rows.map(function(r){return {orig:r.orig,name:String(r.name||"").trim(),remind:r.remind}}).filter(function(r){return r.name});
+    var names=rows.map(function(r){return r.name});
+    if(!rows.length){e.preventDefault();toast("Нужна хотя бы одна стадия");return;}
+    if(names.some(function(n,i){return names.indexOf(n)!==i})){e.preventDefault();toast("Названия стадий не должны повторяться");return;}
+    rows.forEach(function(r){
+      if(r.orig&&r.orig!==r.name){
+        state.contacts.forEach(function(c){if(c.stage===r.orig)c.stage=r.name});
+        state.pending.forEach(function(p){if(p.stage===r.orig)p.stage=r.name});
+      }
+    });
+    state.stages=names;
+    state.settings.remindStages=rows.filter(function(r){return r.remind}).map(function(r){return r.name});
+    state.settings.amoUrl=normalizeUrl($("sAmo").value);
+    state.settings.remindText=$("sText").value.trim()||DEFAULT_SETTINGS.remindText;
+    state.settings.allowReg=$("sReg").checked;
+    if(ui.stage&&names.indexOf(ui.stage)<0) ui.stage="";
+    save(); renderAlerts(); render(); toast("Настройки сохранены");
+  });
+
+  /* ---------- пользователи (админ) ---------- */
+  function adminCount(){return state.users.filter(function(u){return u.role==="admin"}).length}
+  function renderUsers(){
+    $("usersList").innerHTML=state.users.map(function(u){
+      var me=ui.me&&u.id===ui.me.id;
+      var n=state.contacts.filter(function(c){return c.owner===u.id}).length;
+      return '<div class="urow"><div class="avatar" style="background:'+colorFor(u.name)+';width:40px;height:40px;font-size:16px">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
+        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.login)+' · людей: '+n+'</div></div>'+
+        '<select data-act="role" data-id="'+u.id+'"'+(me?' disabled':'')+'><option value="user"'+(u.role==="user"?" selected":"")+'>Сотрудник</option><option value="admin"'+(u.role==="admin"?" selected":"")+'>Админ</option></select>'+
+        '<button class="icon" data-act="pw" data-id="'+u.id+'">Пароль</button>'+
+        (me?'':'<button class="icon" data-act="del" data-id="'+u.id+'">Удалить</button>')+'</div>';
+    }).join("")||'<div class="hint">Пока никого нет</div>';
+  }
+  $("btnUsers").onclick=function(){if(!isAdmin())return;renderUsers();$("dlgUsers").showModal()};
+  $("uClose").onclick=function(){$("dlgUsers").close()};
+  $("usersList").addEventListener("click",async function(e){
+    var t=e.target.closest("[data-act]"); if(!t||!isAdmin()) return;
+    var act=t.getAttribute("data-act"), id=t.getAttribute("data-id");
+    var u=state.users.filter(function(x){return x.id===id})[0]; if(!u) return;
+    if(act==="pw"){
+      var p=await appPrompt("Новый пароль для «"+u.name+"» (минимум 4 символа):",{title:"Изменение пароля",password:true,okText:"Изменить"});
+      if(p===null) return;
+      if(p.length<4){toast("Пароль слишком короткий");return;}
+      u.salt=randHex(16); u.hash=hashPw(p,u.salt); save(); toast("Пароль изменён");
+    }else if(act==="del"){
+      if(u.role==="admin"&&adminCount()<2){toast("Нельзя удалить последнего администратора");return;}
+      var n=state.contacts.filter(function(c){return c.owner===u.id}).length;
+      if(await appConfirm("Удалить «"+u.name+"»?"+(n?" Его люди ("+n+") перейдут к вам.":""),"Удаление пользователя")){
+        state.contacts.forEach(function(c){if(c.owner===u.id)c.owner=ui.me.id});
+        state.pending.forEach(function(p){if(p.owner===u.id)p.owner=ui.me.id});
+        state.links.sheets=state.links.sheets.filter(function(x){return x.owner!==u.id});
+        state.links.apps=state.links.apps.filter(function(x){return x.owner!==u.id});
+        state.users=state.users.filter(function(x){return x.id!==u.id});
+        save(); renderUsers(); render(); renderAlerts(); toast("Удалено");
+      }
+    }
+  });
+  $("usersList").addEventListener("change",function(e){
+    var t=e.target; if(!isAdmin()||t.getAttribute("data-act")!=="role") return;
+    var u=state.users.filter(function(x){return x.id===t.getAttribute("data-id")})[0]; if(!u) return;
+    if(t.value!=="admin"&&u.role==="admin"&&adminCount()<2){toast("Должен остаться хотя бы один администратор");renderUsers();return;}
+    u.role=t.value; save(); renderUsers(); toast("Роль изменена");
+  });
+
+  /* ---------- копии и экспорт ---------- */
+  function download(name,text,type){
+    var b=new Blob([text],{type:type}), a=document.createElement("a");
+    a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click();
+    setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},500);
+  }
+  function stamp(){var d=new Date();return d.toISOString().slice(0,10)}
+  $("btnExport").onclick=function(){
+    if(!isAdmin()) return;
+    download("kontakty-"+stamp()+".json",JSON.stringify(state,null,2),"application/json");
+    toast("Копия сохранена в «Загрузки». В ней есть пароли в зашифрованном виде — храните её в надёжном месте");
+  };
+  $("btnImport").onclick=function(){if(isAdmin())$("file").click()};
+  $("file").addEventListener("change",function(){
+    var f=this.files[0]; if(!f||!isAdmin()) return;
+    var r=new FileReader();
+    r.onload=async function(){
+      try{
+        var d=JSON.parse(r.result);
+        if(!d||!Array.isArray(d.contacts)) throw 0;
+        if(!await appConfirm("Заменить текущие данные (людей: "+state.contacts.length+") данными из копии (людей: "+d.contacts.length+")?","Загрузка копии")) return;
+        var relogin=false;
+        if(Array.isArray(d.users)&&d.users.some(function(u){return u.role==="admin"})&&await appConfirm("В копии есть учётные записи ("+d.users.length+"). Заменить текущие учётные записи тоже? После этого нужно будет войти заново.","Учётные записи")){
+          state.users=d.users; relogin=true;
+        }
+        state.contacts=d.contacts; if(Array.isArray(d.stages)&&d.stages.length) state.stages=d.stages;
+        if(d.links&&Array.isArray(d.links.sheets)&&Array.isArray(d.links.apps)) state.links=d.links;
+        if(d.settings) Object.keys(d.settings).forEach(function(k){state.settings[k]=d.settings[k]});
+        if(Array.isArray(d.pending)) state.pending=d.pending;
+        save();
+        if(relogin){endSession();showAuth("login");toast("Копия загружена. Войдите заново");}
+        else{renderAlerts();render();toast("Копия загружена");}
+      }catch(e){toast("Файл не похож на копию контактов")}
+    };
+    r.readAsText(f); this.value="";
+  });
+  $("btnCsv").onclick=function(){
+    var adm=isAdmin();
+    var head=["Имя","Телефон","WhatsApp","Telegram","MAX","VK","Стадия","Заметки","Обновлено","Сделка amoCRM"]; if(adm) head.push("Сотрудник");
+    var rows=[head];
+    mine().forEach(function(c){
+      var ch=c.channels||{};
+      var row=[c.name,c.phone,ch.wa?"да":"",ch.tg?"да":"",ch.max?"да":"",ch.vk?"да":"",c.stage,c.notes,new Date(c.updated).toLocaleString("ru-RU"),c.deal||""];
+      if(adm) row.push(c.owner?userName(c.owner):"");
+      rows.push(row);
+    });
+    var csv="\ufeff"+rows.map(function(r){return r.map(function(v){return '"'+String(v==null?"":v).replace(/"/g,'""')+'"'}).join(";")}).join("\r\n");
+    download("kontakty-"+stamp()+".csv",csv,"text/csv;charset=utf-8");
+    toast("Таблица сохранена — откройте в Excel");
+  };
+
+  document.addEventListener("keydown",function(e){
+    if(!ui.me) return;
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){
+      e.preventDefault();
+      if(ui.tab==="home") setTab("people");
+      $(ui.tab==="sheets"?"qSheets":ui.tab==="apps"?"qApps":"q").focus();
+    }
+  });
+
+  /* ---------- запуск ---------- */
+  function boot(){
+    load();
+    var sid=null;
+    try{sid=sessionStorage.getItem(SKEY)||localStorage.getItem(SKEY)}catch(e){}
+    var u=sid&&state.users.filter(function(x){return x.id===sid})[0];
+    if(u){ui.me=u;enterApp();}
+    else showAuth(state.users.length?"login":"setup");
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
