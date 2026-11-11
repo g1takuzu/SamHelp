@@ -67,11 +67,20 @@
       session.user = user; saveSession(session); return user;
     } catch (_) { saveSession(null); return null; }
   }
-  async function signUp(email, password, displayName) {
-    return auth("signup", { email: email, password: password, data: { display_name: displayName } });
+  function authEmail(login) {
+    var value = String(login || "").trim().toLowerCase();
+    // Legacy compatibility: the existing administrator can still sign in with the email used before this change.
+    return value.indexOf("@") >= 0 ? value : value + "@users.samhelp.invalid";
   }
-  async function signIn(email, password) {
-    return auth("token?grant_type=password", { email: email, password: password });
+  async function signUp(login, password, displayName) {
+    var normalized = String(login || "").trim().toLowerCase();
+    return auth("signup", {
+      email: authEmail(normalized), password: password,
+      data: { login: normalized, display_name: displayName }
+    });
+  }
+  async function signIn(login, password) {
+    return auth("token?grant_type=password", { email: authEmail(login), password: password });
   }
   async function signOut() {
     try { if (session && session.access_token) await request("/auth/v1/logout", { method: "POST" }); }
