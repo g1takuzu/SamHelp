@@ -34,7 +34,7 @@ $$;
 
 drop trigger if exists on_auth_user_created_sync_profile on auth.users;
 create trigger on_auth_user_created_sync_profile
-after insert or update of email, raw_user_meta_data on auth.users
+after insert or update on auth.users
 for each row execute function public.sync_shared_profile();
 
 -- Заполнить профили уже зарегистрированных пользователей.
