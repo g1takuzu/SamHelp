@@ -137,7 +137,8 @@
   window.SamHelpCloud = {
     configured: true, currentSession: currentSession, getUser: getUser,
     signUp: signUp, signIn: signIn, signOut: signOut, refresh: refresh, roles: roles,
-    listUsers: listUsers, setUserRole: setUserRole,\n    getSiteCustomizations: getSiteCustomizations, updateSiteCustomizations: updateSiteCustomizations,
+    listUsers: listUsers, setUserRole: setUserRole,
+    getSiteCustomizations: getSiteCustomizations, updateSiteCustomizations: updateSiteCustomizations,
     listShared: listShared, addShared: addShared, updateShared: updateShared, deleteShared: deleteShared
   };
 })();
