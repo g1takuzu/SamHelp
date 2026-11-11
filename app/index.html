@@ -233,10 +233,9 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     <div class="auth-tabs" id="authTabs">
       <button type="button" data-m="login">Вход</button>
       <button type="button" data-m="register" id="tabReg">Регистрация</button>
-      <button type="button" data-m="admin">Администратор</button>
     </div>
     <form id="authForm" autocomplete="off">
-      <div class="field"><label>Логин</label><input id="aLogin" autocomplete="off" spellcheck="false"></div>
+      <div class="field"><label>Email</label><input id="aLogin" type="email" autocomplete="email" required spellcheck="false"></div>
       <div class="field" id="aNameRow"><label>Ваше имя (как показывать)</label><input id="aName" autocomplete="off"></div>
       <div class="field"><label>Пароль</label><input id="aPass" type="password" autocomplete="off"></div>
       <div class="field" id="aPass2Row"><label>Повторите пароль</label><input id="aPass2" type="password" autocomplete="off"></div>
@@ -263,8 +262,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       <button class="tab" data-tab="apps">🚀 Программы</button>
       <div class="hact">
       <button class="btn" id="btnStages" data-tabs="people" data-admin>Стадии и amoCRM</button>
-      <button class="btn" id="btnUsers" data-admin>Пользователи</button>
-      <button class="btn" id="btnRestore" data-tabs="sheets apps" data-admin>Вернуть стандартные</button>
+      <button class="btn" id="btnRestore" data-tabs="sheets apps" data-editor>Вернуть стандартные</button>
       <button class="btn" id="btnExport" data-admin>Сохранить копию</button>
       <button class="btn" id="btnImport" data-admin>Загрузить копию</button>
       <button class="btn" id="btnCsv" data-tabs="people">В Excel (CSV)</button>
@@ -449,12 +447,13 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   };
 
   var state={contacts:[],stages:DEFAULT_STAGES.slice(),links:null,users:[],settings:null,pending:[]};
-  var ui={me:null,tab:"home",stage:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",rows:[]};
+  var ui={me:null,tab:"home",stage:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",rows:[],cloudBusy:false};
 
   var $=function(id){return document.getElementById(id)};
   function uid(){return "x"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
   function clone(o){return JSON.parse(JSON.stringify(o))}
   function isAdmin(){return !!(ui.me&&ui.me.role==="admin")}
+  function canEditShared(){return !!(ui.me&&(ui.me.role==="admin"||ui.me.role==="editor"))}
 
   /* ---------- хранение ---------- */
   function seedLinks(){
@@ -596,86 +595,75 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     return s;
   }
 
-  /* ---------- учётные записи ---------- */
-  function findUser(login){login=String(login||"").trim().toLowerCase();return state.users.filter(function(u){return u.login===login})[0]}
-  function createUser(login,name,pw,role){
-    login=String(login||"").trim().toLowerCase();
-    if(login.length<3) return {err:"Логин — минимум 3 символа"};
-    if(/\s/.test(login)) return {err:"В логине не должно быть пробелов"};
-    if(findUser(login)) return {err:"Такой логин уже занят"};
-    if(String(pw||"").length<4) return {err:"Пароль — минимум 4 символа"};
-    var salt=randHex(16);
-    var u={id:uid(),login:login,name:String(name||"").trim()||login,salt:salt,hash:hashPw(pw,salt),role:role,created:Date.now()};
-    state.users.push(u); save();
-    return {user:u};
-  }
-  function tryLogin(mode,login,pw){
-    var u=findUser(login);
-    if(!u||u.hash!==hashPw(String(pw||""),u.salt)) return {err:"Неверный логин или пароль"};
-    if(mode==="admin"&&u.role!=="admin") return {err:"У этой учётной записи нет прав администратора"};
-    if(mode==="login"&&u.role==="admin") return {err:"Это администратор — войдите через вкладку «Администратор»"};
-    return {user:u};
-  }
-  function startSession(u,remember){
-    ui.me=u;
-    try{
-      (remember?localStorage:sessionStorage).setItem(SKEY,u.id);
-      (remember?sessionStorage:localStorage).removeItem(SKEY);
-    }catch(e){}
-  }
-  function endSession(){
-    ui.me=null;
-    try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
-  }
-
+  /* ---------- Supabase: авторизация и профиль ---------- */
+  var CLOUD=window.SamHelpCloud;
   var AUTH_TEXT={
-    setup:{t:"Первый запуск",s:"Создайте учётную запись администратора. Она даёт право редактировать вкладки, стадии и пользователей.",b:"Создать и войти",h:"Запомните пароль: если администратор его забудет, восстановить доступ можно только очисткой данных приложения."},
-    login:{t:"Вход",s:"Войдите под своим логином.",b:"Войти",h:""},
-    register:{t:"Регистрация",s:"Создайте свой логин и пароль. Ваших людей будете видеть только вы и администратор.",b:"Зарегистрироваться",h:"Данные хранятся на этом компьютере."},
-    admin:{t:"Вход для администратора",s:"Специальный вход: после него доступно редактирование вкладок и настроек.",b:"Войти как администратор",h:""}
+    login:{t:"Вход в SamHelp",s:"Войдите по адресу электронной почты и паролю.",b:"Войти",h:""},
+    register:{t:"Регистрация",s:"Создайте аккаунт. Общие таблицы и приложения будут доступны после входа.",b:"Зарегистрироваться",h:"Используйте действующий email. Если подтверждение почты включено, потребуется перейти по письму."}
   };
   function showAuth(mode){
-    ui.authMode=mode;
-    var x=AUTH_TEXT[mode];
-    $("auth").hidden=false; $("appRoot").hidden=true;
-    $("authTitle").textContent=x.t; $("authSub").textContent=x.s; $("aSubmit").textContent=x.b; $("aHint").textContent=x.h;
-    $("authTabs").hidden=(mode==="setup");
-    $("tabReg").hidden=!state.settings.allowReg;
-    [].forEach.call(document.querySelectorAll("#authTabs button"),function(b){b.classList.toggle("on",b.getAttribute("data-m")===mode)});
-    var reg=(mode==="setup"||mode==="register");
-    $("aNameRow").hidden=!reg; $("aPass2Row").hidden=!reg;
-    $("aPass").value=""; $("aPass2").value=""; $("aErr").textContent="";
+    ui.authMode=mode;var x=AUTH_TEXT[mode]||AUTH_TEXT.login;
+    $("auth").hidden=false;$("appRoot").hidden=true;
+    $("authTitle").textContent=x.t;$("authSub").textContent=x.s;$("aSubmit").textContent=x.b;$("aHint").textContent=x.h;
+    $("authTabs").hidden=false;$("tabReg").hidden=false;
+    [].forEach.call(document.querySelectorAll("#authTabs button"),function(b){
+      b.classList.toggle("on",b.getAttribute("data-m")===mode);
+      if(b.getAttribute("data-m")==="admin")b.hidden=true;
+    });
+    $("aNameRow").hidden=mode!=="register";$("aPass2Row").hidden=mode!=="register";
+    $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";$("aErr").textContent="";
     setTimeout(function(){$("aLogin").focus()},30);
   }
   [].forEach.call(document.querySelectorAll("#authTabs button"),function(b){
-    b.addEventListener("click",function(){showAuth(b.getAttribute("data-m"))});
+    b.addEventListener("click",function(){var m=b.getAttribute("data-m");if(m==="login"||m==="register")showAuth(m)});
   });
-  $("authForm").addEventListener("submit",function(e){
-    e.preventDefault();
-    var m=ui.authMode, login=$("aLogin").value, pw=$("aPass").value, r;
-    function err(t){$("aErr").textContent=t}
-    if(m==="setup"||m==="register"){
-      if(m==="register"&&!state.settings.allowReg) return err("Регистрация закрыта администратором");
-      if(pw!==$("aPass2").value) return err("Пароли не совпадают");
-      r=createUser(login,$("aName").value,pw,m==="setup"?"admin":"user");
-      if(r.err) return err(r.err);
-      if(m==="setup"){state.contacts.forEach(function(c){if(!c.owner)c.owner=r.user.id});save()}
-    }else{
-      r=tryLogin(m,login,pw);
-      if(r.err) return err(r.err);
-    }
-    startSession(r.user,$("aRemember").checked);
-    $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";
-    enterApp();
+  async function activateCloudUser(user){
+    var rr=await CLOUD.roles(),role=rr.admin?"admin":(rr.editor?"editor":"user"),meta=user.user_metadata||{};
+    ui.me={id:user.id,login:user.email||"",email:user.email||"",name:meta.display_name||user.email||"Пользователь",role:role};
+    state.users=[ui.me];await refreshSharedLinks();save();enterApp();
+  }
+  async function refreshSharedLinks(){
+    if(!ui.me||ui.cloudBusy)return;
+    ui.cloudBusy=true;
+    try{
+      var cloud=await CLOUD.listShared();
+      ["sheets","apps"].forEach(function(k){
+        var personal=(state.links[k]||[]).filter(function(x){return !!x.owner&&x.owner===ui.me.id});
+        state.links[k]=personal.concat(cloud[k]||[]);
+      });
+      save();
+    }catch(ex){toast("Не удалось обновить общие ссылки: "+(ex.message||ex))}
+    finally{ui.cloudBusy=false}
+  }
+  $("authForm").addEventListener("submit",async function(e){
+    e.preventDefault();var mode=ui.authMode,email=$("aLogin").value.trim().toLowerCase(),pw=$("aPass").value;
+    function err(m){$("aErr").textContent=m}
+    $("aSubmit").disabled=true;
+    try{
+      if(!CLOUD)throw new Error("Не удалось загрузить модуль Supabase.");
+      if(!email||!pw)throw new Error("Введите email и пароль.");
+      if(mode==="register"){
+        if(pw!==$("aPass2").value)throw new Error("Пароли не совпадают.");
+        if(pw.length<6)throw new Error("Пароль должен содержать не менее 6 символов.");
+        var nm=$("aName").value.trim();if(!nm)throw new Error("Введите имя.");
+        var result=await CLOUD.signUp(email,pw,nm);
+        if(!result||!result.access_token){
+          showAuth("login");$("aErr").textContent="Аккаунт создан. Подтвердите email по ссылке из письма, затем войдите.";return;
+        }
+      }else await CLOUD.signIn(email,pw);
+      var user=await CLOUD.getUser();if(!user)throw new Error("Не удалось получить профиль. Попробуйте войти ещё раз.");
+      await activateCloudUser(user);
+    }catch(ex){err(ex.message||"Ошибка входа. Проверьте данные и подключение.")}
+    finally{$("aSubmit").disabled=false}
   });
   function enterApp(){
     $("auth").hidden=true; $("appRoot").hidden=false;
-    $("meChip").innerHTML='👤 '+esc(ui.me.name)+(isAdmin()?' <i>админ</i>':'');
+    $("meChip").innerHTML='👤 '+esc(ui.me.name)+(isAdmin()?' <i>админ</i>':(canEditShared()?' <i>редактор</i>':''));
     ui.stage=""; setTab("home"); renderAlerts();
   }
   $("btnLogout").onclick=function(){
     ["dlg","dlgLink","dlgStages","dlgUsers"].forEach(function(id){try{$(id).close()}catch(e){}});
-    endSession(); showAuth(state.users.length?"login":"setup");
+    ui.me=null;CLOUD.signOut().catch(function(){});showAuth("login");
   };
 
   /* ---------- ссылки на чаты ---------- */
@@ -803,11 +791,13 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       var tabs=b.getAttribute("data-tabs"), hide=false;
       if(tabs&&tabs.split(" ").indexOf(t)<0) hide=true;
       if(b.hasAttribute("data-admin")&&!isAdmin()) hide=true;
+      if(b.hasAttribute("data-editor")&&!canEditShared()) hide=true;
       b.hidden=hide;
     });
     $("btnAdd").textContent=ADD_LABEL[t];
     $("btnAdd").hidden=(t==="home");
     render();
+    if((t==="sheets"||t==="apps")&&ui.me)refreshSharedLinks().then(render);
   }
   function render(){
     if(ui.tab==="sheets") renderSheets();
@@ -976,7 +966,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   /* ---------- таблицы и программы: общие и личные ---------- */
   function matchLink(x,q){return !q||((x.title||"")+" "+(x.note||"")+" "+(x.url||"")+" "+(x.group||"")).toLowerCase().indexOf(q)>-1}
   function findLink(kind,id){return state.links[kind].filter(function(x){return x.id===id})[0]}
-  function canEditLink(x){return x.owner?!!(ui.me&&x.owner===ui.me.id):isAdmin()}
+  function canEditLink(x){return x.owner?!!(ui.me&&x.owner===ui.me.id):canEditShared()}
   function visibleLinks(kind,q){
     return state.links[kind].filter(function(x){return (!x.owner||x.owner===ui.me.id)&&matchLink(x,q||"")});
   }
@@ -1006,7 +996,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     var html="";
     if(q&&!list.length){html=emptyMsg([1],"📊","","");}
     else{
-      if(shared.length||!q) html+=secHead("🌐","Общие","Для всех сотрудников"+(isAdmin()?" — их редактируете вы":""));
+      if(shared.length||!q) html+=secHead("🌐","Общие","Для всех сотрудников"+(canEditShared()?" — их можете редактировать вы":""));
       if(shared.length) html+=shared.map(sheetCard).join(""); else if(!q) html+='<div class="hint">'+esc(sharedEmpty())+'</div>';
       if(personal.length||!q) html+=secHead("👤","Мои","Личные ссылки — видите только вы");
       html+=personal.map(sheetCard).join("");
@@ -1028,7 +1018,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     var html="";
     if(q&&!list.length){html=emptyMsg([1],"🚀","","");}
     else{
-      if(shared.length||!q) html+=secHead("🌐","Общие","Для всех сотрудников"+(isAdmin()?" — их редактируете вы":""));
+      if(shared.length||!q) html+=secHead("🌐","Общие","Для всех сотрудников"+(canEditShared()?" — их можете редактировать вы":""));
       if(shared.length){
         var groups=[],map={};
         shared.forEach(function(x){var g=x.group||"Другое";if(!map[g]){map[g]=[];groups.push(g)}map[g].push(x)});
@@ -1046,7 +1036,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     return function(e){
       var t=e.target.closest("[data-act]"); if(!t) return;
       var act=t.getAttribute("data-act");
-      if(act==="add") return openLinkDlg(kind,null,"me");
+      if(act==="add") return openLinkDlg(kind,null,canEditShared()?"all":"me");
       var id=t.getAttribute("data-id"), x=findLink(kind,id); if(!x) return;
       if(act==="edit") return canEditLink(x)&&openLinkDlg(kind,id);
       if(act==="copy") return copyText(x.url,"Ссылка скопирована");
@@ -1055,22 +1045,22 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   }
 
   function syncScope(){
-    var apps=ui.linkKind==="apps", sc=isAdmin()?$("lScope").value:"me";
+    var apps=ui.linkKind==="apps", sc=canEditShared()?$("lScope").value:"me";
     $("rowGroup").hidden=!(apps&&sc==="all"); $("rowIcon").hidden=!apps;
   }
   function openLinkDlg(kind,id,startScope){
     ui.linkKind=kind; ui.linkId=id||null;
     var it=id?findLink(kind,id):null, apps=kind==="apps";
     if(it&&!canEditLink(it)) return;
-    var scope=it?(it.owner?"me":"all"):(isAdmin()?(startScope||"all"):"me");
+    var scope=it?(it.owner?"me":"all"):(canEditShared()?(startScope||"all"):"me");
     $("lHead").textContent=apps?(it?"Изменить программу":"Новая программа"):(it?"Изменить таблицу":"Новая таблица");
     $("lUrlLabel").textContent=apps?"Адрес сайта или команда программы":"Ссылка на таблицу или путь к файлу";
     $("lUrl").placeholder=apps?"https://…  или  tg://  или  ms-excel:":"https://docs.google.com/…  или  C:\\Таблицы\\продажи.xlsx";
     $("lUrlHint").textContent=apps
       ?"Для сайтов — обычная ссылка. Для программ — команда вроде tg:// (Telegram), ms-excel: (Excel). Путь к .exe-файлу тоже можно вставить: он скопируется, дальше Win+R, вставить, Enter."
       :"Для файла на компьютере вставьте путь: по кнопке он скопируется — нажмите Win+R, вставьте и Enter, файл откроется в Excel.";
-    $("rowScope").hidden=!isAdmin(); $("lScope").value=scope;
-    $("lScopeHint").textContent=isAdmin()?"":"Эту ссылку увидите только вы.";
+    $("rowScope").hidden=!canEditShared(); $("lScope").value=scope;
+    $("lScopeHint").textContent=canEditShared()?"":"Эту ссылку увидите только вы.";
     $("groupList").innerHTML=Object.keys(state.links.apps.reduce(function(a,x){if(!x.owner)a[x.group||"Другое"]=1;return a},{})).map(function(g){return '<option value="'+esc(g)+'">'}).join("");
     $("lTitle").value=it?it.title||"":"";
     $("lUrl").value=it?it.url||"":"";
@@ -1084,41 +1074,53 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   }
   $("lScope").addEventListener("change",syncScope);
 
-  $("formLink").addEventListener("submit",function(e){
-    var url=normalizeUrl($("lUrl").value), kind=ui.linkKind;
-    if(!url){e.preventDefault();toast("Вставьте ссылку или путь");return;}
-    var scope=isAdmin()?$("lScope").value:"me";
-    var it=ui.linkId?findLink(kind,ui.linkId):null;
-    if(it&&!canEditLink(it)){e.preventDefault();return;}
+  $("formLink").addEventListener("submit",async function(e){
+    e.preventDefault();var url=normalizeUrl($("lUrl").value),kind=ui.linkKind;
+    if(!url){toast("Вставьте ссылку или путь");return}
+    var scope=canEditShared()?$("lScope").value:"me",it=ui.linkId?findLink(kind,ui.linkId):null;
+    if(it&&!canEditLink(it))return;
+    if(scope==="all"&&!canEditShared()){toast("Недостаточно прав для общего раздела");return}
     var data={title:$("lTitle").value.trim()||hostOf(url),url:url,note:$("lNote").value.trim()};
-    if(kind==="apps"){data.group=scope==="all"?($("lGroup").value.trim()||"Другое"):"";data.icon=$("lIcon").value.trim()||"🔗";}
-    else data.icon="📊";
-    if(it){
-      Object.keys(data).forEach(function(k){it[k]=data[k]});
-      if(scope==="me") it.owner=ui.me.id; else delete it.owner;
-    }else{
-      data.id=uid(); if(scope==="me") data.owner=ui.me.id;
-      state.links[kind].push(data);
-    }
-    save(); render(); toast("Сохранено");
+    if(kind==="apps"){data.group=scope==="all"?($("lGroup").value.trim()||"Другое"):"";data.icon=$("lIcon").value.trim()||"🔗"}else data.icon="📊";
+    var submit=$("formLink").querySelector('button[type="submit"]');if(submit)submit.disabled=true;
+    try{
+      if(it&&it._cloud){
+        if(scope==="all"){
+          var upd=await CLOUD.updateShared(kind,it.id,data);
+          state.links[kind]=state.links[kind].map(function(x){return x.id===it.id?upd:x});
+        }else{
+          await CLOUD.deleteShared(kind,it.id);state.links[kind]=state.links[kind].filter(function(x){return x.id!==it.id});
+          data.id=uid();data.owner=ui.me.id;state.links[kind].push(data);
+        }
+      }else if(scope==="all"){
+        var added=await CLOUD.addShared(kind,data);
+        if(it)state.links[kind]=state.links[kind].filter(function(x){return x.id!==it.id});
+        state.links[kind].push(added);
+      }else if(it){
+        Object.keys(data).forEach(function(k){it[k]=data[k]});it.owner=ui.me.id;
+      }else{data.id=uid();data.owner=ui.me.id;state.links[kind].push(data)}
+      save();render();$("dlgLink").close();toast("Сохранено");
+    }catch(ex){toast("Не удалось сохранить: "+(ex.message||ex))}
+    finally{if(submit)submit.disabled=false}
   });
   $("lCancel").onclick=function(){$("dlgLink").close()};
   $("lDel").onclick=async function(){
-    var it=ui.linkId?findLink(ui.linkKind,ui.linkId):null;
-    if(!it||!canEditLink(it)) return;
+    var it=ui.linkId?findLink(ui.linkKind,ui.linkId):null;if(!it||!canEditLink(it))return;
     if(await appConfirm("Удалить эту ссылку?","Удаление ссылки")){
-      state.links[ui.linkKind]=state.links[ui.linkKind].filter(function(x){return x.id!==ui.linkId});
-      save(); render(); $("dlgLink").close(); toast("Удалено");
+      try{if(it._cloud)await CLOUD.deleteShared(ui.linkKind,it.id);
+        state.links[ui.linkKind]=state.links[ui.linkKind].filter(function(x){return x.id!==ui.linkId});
+        save();render();$("dlgLink").close();toast("Удалено");
+      }catch(ex){toast("Не удалось удалить: "+(ex.message||ex))}
     }
   };
-  $("btnRestore").onclick=function(){
-    if(!isAdmin()) return;
-    var kind=ui.tab==="apps"?"apps":"sheets";
-    var have=state.links[kind].filter(function(x){return !x.owner}).map(function(x){return x.url}), added=0;
-    DEFAULT_LINKS[kind].forEach(function(d){
-      if(have.indexOf(d.url)<0){var c=clone(d);c.id=uid();state.links[kind].push(c);added++}
-    });
-    save(); render(); toast(added?("Добавлено стандартных: "+added):"Все стандартные уже на месте");
+  $("btnRestore").onclick=async function(){
+    if(!canEditShared())return;var kind=ui.tab==="apps"?"apps":"sheets";
+    var have=state.links[kind].filter(function(x){return !x.owner}).map(function(x){return x.url}),added=0;
+    $("btnRestore").disabled=true;
+    try{for(var i=0;i<DEFAULT_LINKS[kind].length;i++){var d=DEFAULT_LINKS[kind][i];if(have.indexOf(d.url)<0){await CLOUD.addShared(kind,d);added++}}
+      await refreshSharedLinks();render();toast(added?("Добавлено стандартных: "+added):"Все стандартные уже на месте");
+    }catch(ex){toast("Не удалось восстановить: "+(ex.message||ex))}
+    finally{$("btnRestore").disabled=false}
   };
   $("listSheets").addEventListener("click",onLinkClick("sheets"));
   $("listApps").addEventListener("click",onLinkClick("apps"));
@@ -1400,14 +1402,13 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   });
 
   /* ---------- запуск ---------- */
-  function boot(){
-    load();
-    var sid=null;
-    try{sid=sessionStorage.getItem(SKEY)||localStorage.getItem(SKEY)}catch(e){}
-    var u=sid&&state.users.filter(function(x){return x.id===sid})[0];
-    if(u){ui.me=u;enterApp();}
-    else showAuth(state.users.length?"login":"setup");
+  async function boot(){
+    load();showAuth("login");
+    try{var user=await CLOUD.getUser();if(user)await activateCloudUser(user)}
+    catch(ex){showAuth("login");$("aErr").textContent=ex.message||"Не удалось подключиться к Supabase."}
   }
+  window.addEventListener("focus",function(){if(ui.me)refreshSharedLinks().then(render)});
+  document.addEventListener("visibilitychange",function(){if(!document.hidden&&ui.me)refreshSharedLinks().then(render)});
   boot();
 })();
 </script>
