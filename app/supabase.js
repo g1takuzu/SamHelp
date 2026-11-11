@@ -85,6 +85,14 @@
     var admin = !!(user && admins && admins.some(function (x) { return x.user_id === user.id; }));
     return { editor: editor, admin: admin };
   }
+  async function getSiteCustomizations() {
+    return request("/rest/v1/rpc/get_site_customizations", { method: "POST", body: {} });
+  }
+  async function updateSiteCustomizations(config) {
+    return request("/rest/v1/rpc/admin_update_site_customizations", {
+      method: "POST", body: { new_config: config }
+    });
+  }
   async function listUsers() {
     return request("/rest/v1/rpc/admin_list_users", { method: "POST", body: {} });
   }
@@ -129,7 +137,7 @@
   window.SamHelpCloud = {
     configured: true, currentSession: currentSession, getUser: getUser,
     signUp: signUp, signIn: signIn, signOut: signOut, refresh: refresh, roles: roles,
-    listUsers: listUsers, setUserRole: setUserRole,
+    listUsers: listUsers, setUserRole: setUserRole,\n    getSiteCustomizations: getSiteCustomizations, updateSiteCustomizations: updateSiteCustomizations,
     listShared: listShared, addShared: addShared, updateShared: updateShared, deleteShared: deleteShared
   };
 })();
