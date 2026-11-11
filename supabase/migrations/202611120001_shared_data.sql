@@ -32,6 +32,8 @@ as $$
 begin
   new.updated_at = now();
   new.updated_by = auth.uid();
+  -- Автор исходной записи не меняется при редактировании другим редактором.
+  new.created_by = old.created_by;
   return new;
 end;
 $$;
@@ -91,7 +93,7 @@ with check (
     select 1 from public.shared_editors e
     where e.user_id = (select auth.uid())
   )
-  and created_by = (select auth.uid())
+  and updated_by = (select auth.uid())
 );
 
 drop policy if exists "Editors can delete shared links" on public.shared_links;
