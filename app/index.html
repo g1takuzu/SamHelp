@@ -164,6 +164,18 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
 .srow .mini:hover{border-color:var(--accent);color:var(--accent)}
 .urow{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}
 .urow:last-child{border-bottom:none}
+/* Визуальный редактор сайта — только для администратора */
+#siteEditor{position:fixed;right:18px;top:18px;bottom:18px;width:min(360px,calc(100vw - 36px));z-index:180;background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:24px;box-shadow:0 20px 70px rgba(0,0,0,.3);padding:18px;overflow:auto}
+#siteEditor h2{font-size:19px;margin:0 0 6px;color:var(--accent)}
+#siteEditor .editor-section{display:flex;flex-direction:column;gap:7px;margin:14px 0}
+#siteEditor label{font-size:12px;font-weight:800;color:var(--muted)}
+#siteEditor input[type=text],#siteEditor input[type=number]{width:100%;padding:10px 12px;border:2px solid var(--line);border-radius:12px;background:var(--bg);color:var(--text)}
+#siteEditor input[type=color]{width:100%;height:40px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:3px}
+#siteEditor .editor-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
+.site-editing [data-site-selected="true"]{outline:3px solid #ff2e63!important;outline-offset:3px!important;cursor:crosshair!important}
+.site-editing #siteEditor,.site-editing #siteEditor *{cursor:auto!important}
+@media(max-width:600px){#siteEditor{top:auto;left:10px;right:10px;bottom:10px;width:auto;max-height:72vh}}
+
 .urow select{padding:8px 12px;border-radius:999px;border:2px solid var(--line);background:var(--bg);font-weight:700}
 .dash{display:flex;flex-direction:column;gap:18px}
 .hero{position:relative;overflow:hidden;border-radius:32px;padding:30px 32px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;
@@ -291,6 +303,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       <div class="hact">
       <button class="btn" id="btnStages" data-tabs="people" data-admin>Стадии и amoCRM</button>
       <button class="btn" id="btnUsers" data-admin>👥 Роли пользователей</button>
+      <button class="btn" id="btnSiteEdit" data-admin>🎨 Редактор сайта</button>
       <button class="btn" id="btnRestore" data-tabs="sheets apps" data-editor>Вернуть стандартные</button>
       <button class="btn" id="btnExport" data-admin>Сохранить копию</button>
       <button class="btn" id="btnImport" data-admin>Загрузить копию</button>
@@ -431,6 +444,37 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
 </dialog>
 
 
+<aside id="siteEditor" hidden>
+  <h2>🎨 Редактор SamHelp</h2>
+  <div class="hint">Нажми на элемент страницы, чтобы выбрать его. Можно менять текст, оформление и видимость. Изменения увидят все пользователи.</div>
+  <div class="editor-section">
+    <label>Выбранный элемент</label>
+    <div id="siteSelectedName" class="hint">Пока ничего не выбрано</div>
+  </div>
+  <div class="editor-section">
+    <label for="siteText">Текст элемента (для простых текстовых элементов)</label>
+    <input id="siteText" type="text" placeholder="Выберите текст на странице">
+  </div>
+  <div class="editor-section">
+    <label for="siteColor">Цвет текста</label><input id="siteColor" type="color" value="#2a1a24">
+    <label for="siteBg">Цвет фона элемента</label><input id="siteBg" type="color" value="#ffffff">
+    <label for="siteSize">Размер текста, px</label><input id="siteSize" type="number" min="10" max="64" value="15">
+    <label class="remember"><input id="siteHidden" type="checkbox"> Скрыть выбранный элемент</label>
+  </div>
+  <div class="editor-section">
+    <label>Общий стиль сайта</label>
+    <label for="siteAccent">Основной цвет</label><input id="siteAccent" type="color" value="#ff2e63">
+    <label for="sitePageBg">Цвет страницы</label><input id="sitePageBg" type="color" value="#f7f3f5">
+  </div>
+  <div class="editor-actions">
+    <button class="btn primary" id="siteSave" type="button">Сохранить для всех</button>
+    <button class="btn" id="siteResetElement" type="button">Сбросить элемент</button>
+    <button class="btn danger" id="siteResetAll" type="button">Сбросить всё</button>
+    <button class="btn" id="siteClose" type="button">Закрыть</button>
+  </div>
+  <div class="hint" id="siteEditorStatus" role="status"></div>
+</aside>
+
 <dialog id="appMessageDialog">
   <form method="dialog" class="dlg" id="appMessageForm">
     <h2 id="appMessageTitle">Подтверждение</h2>
@@ -476,7 +520,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   };
 
   var state={contacts:[],stages:DEFAULT_STAGES.slice(),links:null,users:[],settings:null,pending:[]};
-  var ui={me:null,tab:"home",stage:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",rows:[],cloudBusy:false};
+  var ui={me:null,tab:"home",stage:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",rows:[],cloudBusy:false,siteEditing:false,siteSelected:null,siteConfig:{elements:{},theme:{}}};
 
   var $=function(id){return document.getElementById(id)};
   function uid(){return "x"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -651,6 +695,8 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     ui.me={id:user.id,login:user.email||"",email:user.email||"",name:meta.display_name||user.email||"Пользователь",role:role};
     state.users=[ui.me];
     await refreshSharedLinks();
+    try{ui.siteConfig=await CLOUD.getSiteCustomizations()||{elements:{},theme:{}};}catch(ex){ui.siteConfig={elements:{},theme:{}};toast("Не удалось загрузить оформление сайта: "+(ex.message||ex));}
+    if(!ui.siteConfig.elements)ui.siteConfig.elements={}; if(!ui.siteConfig.theme)ui.siteConfig.theme={};
     if(role==="admin"){
       try{await loadAdminUsers()}catch(ex){toast("Не удалось загрузить список пользователей: "+(ex.message||ex))}
     }
@@ -700,7 +746,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   function enterApp(){
     $("auth").hidden=true; $("appRoot").hidden=false;
     $("meChip").innerHTML='👤 '+esc(ui.me.name)+(isAdmin()?' <i>админ</i>':(canEditShared()?' <i>редактор</i>':''));
-    ui.stage=""; setTab("home"); renderAlerts();
+    ui.stage=""; setTab("home"); renderAlerts(); applySiteCustomizations();
   }
   $("btnLogout").onclick=function(){
     ["dlg","dlgLink","dlgStages","dlgUsers"].forEach(function(id){try{$(id).close()}catch(e){}});
@@ -846,6 +892,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     else if(ui.tab==="apps") renderApps();
     else if(ui.tab==="people") renderHome();
     else renderDashboard();
+    applySiteCustomizations();
   }
 
   /* ---------- главная ---------- */
@@ -1379,6 +1426,120 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       try{await loadAdminUsers();renderUsers()}catch(_){}
     }
   });
+
+
+  /* ---------- визуальный редактор интерфейса ---------- */
+  function siteClone(value){return JSON.parse(JSON.stringify(value||{elements:{},theme:{}}))}
+  function siteSelector(el){
+    if(!el||!el.tagName||!$("appRoot").contains(el))return null;
+    if(el.id)return "#"+el.id;
+    var parts=[],node=el;
+    while(node&&node!==$("appRoot")){
+      var tag=node.tagName.toLowerCase(),index=1,prev=node;
+      while((prev=prev.previousElementSibling))if(prev.tagName===node.tagName)index++;
+      parts.unshift(tag+":nth-of-type("+index+")");
+      node=node.parentElement;
+    }
+    return "#appRoot > "+parts.join(" > ");
+  }
+  function validHex(value,fallback){return /^#[0-9a-f]{6}$/i.test(value||"")?value:fallback}
+  function applySiteCustomizations(){
+    var cfg=ui.siteConfig||{elements:{},theme:{}},theme=cfg.theme||{};
+    var root=document.documentElement;
+    if(theme.accent)root.style.setProperty("--accent",validHex(theme.accent,"#ff2e63"));
+    if(theme.pageBg)root.style.setProperty("--bg",validHex(theme.pageBg,"#f7f3f5"));
+    Object.keys(cfg.elements||{}).forEach(function(selector){
+      var item=cfg.elements[selector],el;
+      try{el=document.querySelector(selector)}catch(_){return}
+      if(!el||!$("appRoot").contains(el))return;
+      if(item.text!=null&&!el.children.length&&el.textContent!==item.text)el.textContent=item.text;
+      if(item.color)el.style.color=validHex(item.color,"");
+      if(item.background)el.style.backgroundColor=validHex(item.background,"");
+      if(item.fontSize)el.style.fontSize=Math.max(10,Math.min(64,Number(item.fontSize)||15))+"px";
+      if(item.hidden===true)el.style.display="none";
+      else if(item.hidden===false)el.style.removeProperty("display");
+    });
+  }
+  function selectedSiteElement(){
+    if(!ui.siteSelected)return null;
+    try{return document.querySelector(ui.siteSelected)}catch(_){return null}
+  }
+  function selectSiteElement(el){
+    if(!ui.siteEditing||!el||!$("appRoot").contains(el))return;
+    var selector=siteSelector(el);if(!selector)return;
+    var old=selectedSiteElement();if(old)old.removeAttribute("data-site-selected");
+    ui.siteSelected=selector;el.setAttribute("data-site-selected","true");
+    var item=(ui.siteConfig.elements||{})[selector]||{};
+    $("siteSelectedName").textContent=el.tagName.toLowerCase()+(el.id?"#"+el.id:"")+" · "+selector;
+    $("siteText").value=item.text!=null?item.text:(!el.children.length?el.textContent.trim():"");
+    $("siteText").disabled=!!el.children.length;
+    $("siteColor").value=validHex(item.color,"#2a1a24");
+    $("siteBg").value=validHex(item.background,"#ffffff");
+    $("siteSize").value=item.fontSize||parseInt(getComputedStyle(el).fontSize,10)||15;
+    $("siteHidden").checked=item.hidden===true;
+  }
+  function siteItemUpdate(key,value){
+    if(!ui.siteSelected)return;
+    var cfg=ui.siteConfig,items=cfg.elements||(cfg.elements={}),item=items[ui.siteSelected]||(items[ui.siteSelected]={});
+    item[key]=value;applySiteCustomizations();
+    var el=selectedSiteElement();if(el)el.setAttribute("data-site-selected","true");
+  }
+  function setSiteEditor(active){
+    if(!isAdmin())return;
+    ui.siteEditing=!!active;
+    $("siteEditor").hidden=!active;
+    $("appRoot").classList.toggle("site-editing",active);
+    $("btnSiteEdit").textContent=active?"✖ Выйти из редактора":"🎨 Редактор сайта";
+    if(!active){
+      var el=selectedSiteElement();if(el)el.removeAttribute("data-site-selected");
+      ui.siteSelected=null;
+    }else $("siteEditorStatus").textContent="Режим выбора: нажмите на элемент, который хотите изменить.";
+  }
+  document.addEventListener("click",function(e){
+    if(!ui.siteEditing)return;
+    if(e.target.closest("#siteEditor")||e.target.closest("#btnSiteEdit"))return;
+    var el=e.target.closest("#appRoot *");
+    if(!el)return;
+    e.preventDefault();e.stopPropagation();e.stopImmediatePropagation();
+    selectSiteElement(el);
+  },true);
+  $("btnSiteEdit").onclick=function(){if(!isAdmin())return;setSiteEditor(!ui.siteEditing)};
+  $("siteClose").onclick=function(){setSiteEditor(false)};
+  $("siteText").addEventListener("input",function(){siteItemUpdate("text",this.value)});
+  $("siteColor").addEventListener("input",function(){siteItemUpdate("color",this.value)});
+  $("siteBg").addEventListener("input",function(){siteItemUpdate("background",this.value)});
+  $("siteSize").addEventListener("input",function(){siteItemUpdate("fontSize",Math.max(10,Math.min(64,Number(this.value)||15)))});
+  $("siteHidden").addEventListener("change",function(){siteItemUpdate("hidden",this.checked)});
+  $("siteAccent").addEventListener("input",function(){ui.siteConfig.theme.accent=this.value;applySiteCustomizations()});
+  $("sitePageBg").addEventListener("input",function(){ui.siteConfig.theme.pageBg=this.value;applySiteCustomizations()});
+  $("siteResetElement").onclick=function(){
+    if(!ui.siteSelected)return;
+    delete ui.siteConfig.elements[ui.siteSelected];
+    applySiteCustomizations();var el=selectedSiteElement();if(el)el.removeAttribute("data-site-selected");
+    ui.siteSelected=null;$("siteSelectedName").textContent="Элемент сброшен";$("siteText").value="";
+  };
+  $("siteResetAll").onclick=async function(){
+    if(!isAdmin()||!await appConfirm("Сбросить все сохранённые изменения оформления для всех пользователей?","Сброс оформления"))return;
+    ui.siteConfig={elements:{},theme:{}};applySiteCustomizations();
+    $("siteAccent").value="#ff2e63";$("sitePageBg").value="#f7f3f5";
+    $("siteEditorStatus").textContent="Изменения сброшены локально. Нажмите «Сохранить для всех».";
+  };
+  $("siteSave").onclick=async function(){
+    if(!isAdmin())return;
+    $("siteSave").disabled=true;$("siteEditorStatus").textContent="Сохраняю…";
+    try{
+      await CLOUD.updateSiteCustomizations(ui.siteConfig);
+      $("siteEditorStatus").textContent="Сохранено. Изменения доступны всем пользователям.";
+      toast("Оформление сайта обновлено для всех");
+    }catch(ex){$("siteEditorStatus").textContent="Ошибка сохранения: "+(ex.message||ex)}
+    finally{$("siteSave").disabled=false}
+  };
+  var siteObserver=new MutationObserver(function(){
+    if(siteObserver.pending)return;
+    siteObserver.pending=true;
+    setTimeout(function(){siteObserver.pending=false;applySiteCustomizations()},0);
+  });
+  siteObserver.observe($("appRoot"),{childList:true,subtree:true});
 
   /* ---------- копии и экспорт ---------- */
   function download(name,text,type){
