@@ -1,9 +1,9 @@
 {
-  "name": "moi-kontakty",
+  "name": "SamHelp",
   "version": "1.0.0",
-  "description": "Мои контакты — приложение для управления контактами",
+  "description": "SamHelp — приложение для управления контактами",
   "main": "electron/main.js",
-  "author": "Мои контакты",
+  "author": "g1takuzu",
   "license": "UNLICENSED",
   "scripts": {
     "start": "electron .",
