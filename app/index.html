@@ -275,10 +275,9 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       <button type="button" data-m="register" id="tabReg">Регистрация</button>
     </div>
     <form id="authForm" autocomplete="off">
-      <div class="field"><label>Email</label><input id="aLogin" type="email" autocomplete="email" required spellcheck="false"></div>
-      <div class="field" id="aNameRow"><label>Ваше имя (как показывать)</label><input id="aName" autocomplete="off"></div>
-      <div class="field"><label>Пароль</label><input id="aPass" type="password" autocomplete="off"></div>
-      <div class="field" id="aPass2Row"><label>Повторите пароль</label><input id="aPass2" type="password" autocomplete="off"></div>
+      <div class="field"><label>Логин</label><input id="aLogin" type="text" autocomplete="username" required spellcheck="false" maxlength="32"></div>
+      <div class="field" id="aNameRow"><label>Отображаемое имя</label><input id="aName" autocomplete="nickname" maxlength="60"></div>
+      <div class="field"><label>Пароль</label><input id="aPass" type="password" autocomplete="current-password" required></div>
       <label class="remember"><input type="checkbox" id="aRemember" checked disabled> Вход сохраняется на этом компьютере</label>
       <div class="err" id="aErr"></div>
       <button class="btn primary big" type="submit" id="aSubmit">Войти</button>
@@ -671,8 +670,8 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   /* ---------- Supabase: авторизация и профиль ---------- */
   var CLOUD=window.SamHelpCloud;
   var AUTH_TEXT={
-    login:{t:"Вход в SamHelp",s:"Войдите по адресу электронной почты и паролю.",b:"Войти",h:""},
-    register:{t:"Регистрация",s:"Создайте аккаунт. Общие таблицы и приложения будут доступны после входа.",b:"Зарегистрироваться",h:"Используйте действующий email. Если подтверждение почты включено, потребуется перейти по письму."}
+    login:{t:"Вход в SamHelp",s:"Введите логин и пароль.",b:"Войти",h:""},
+    register:{t:"Регистрация",s:"Создайте аккаунт — почта не требуется.",b:"Зарегистрироваться",h:"Логин: 3–32 символа, латинские буквы, цифры, точка, дефис или подчёркивание."}
   };
   function showAuth(mode){
     ui.authMode=mode;var x=AUTH_TEXT[mode]||AUTH_TEXT.login;
@@ -683,8 +682,9 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       b.classList.toggle("on",b.getAttribute("data-m")===mode);
       if(b.getAttribute("data-m")==="admin")b.hidden=true;
     });
-    $("aNameRow").hidden=mode!=="register";$("aPass2Row").hidden=mode!=="register";
-    $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";$("aErr").textContent="";
+    $("aNameRow").hidden=mode!=="register";
+    $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aErr").textContent="";
+    $("aPass").autocomplete=mode==="register"?"new-password":"current-password";
     setTimeout(function(){$("aLogin").focus()},30);
   }
   [].forEach.call(document.querySelectorAll("#authTabs button"),function(b){
@@ -692,7 +692,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   });
   async function activateCloudUser(user){
     var rr=await CLOUD.roles(),role=rr.admin?"admin":(rr.editor?"editor":"user"),meta=user.user_metadata||{};
-    ui.me={id:user.id,login:user.email||"",email:user.email||"",name:meta.display_name||user.email||"Пользователь",role:role};
+    ui.me={id:user.id,login:meta.login||user.email||"",email:"",name:meta.display_name||meta.login||"Пользователь",role:role};
     state.users=[ui.me];
     await refreshSharedLinks();
     try{ui.siteConfig=await CLOUD.getSiteCustomizations()||{elements:{},theme:{}};}catch(ex){ui.siteConfig={elements:{},theme:{}};toast("Не удалось загрузить оформление сайта: "+(ex.message||ex));}
@@ -706,7 +706,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     if(!isAdmin())return;
     var rows=await CLOUD.listUsers();
     state.users=rows.map(function(u){
-      return {id:u.user_id,login:u.email||"",email:u.email||"",name:u.display_name||u.email||"Пользователь",role:u.role||"user",created_at:u.created_at};
+      return {id:u.user_id,login:u.login||u.email||"",email:u.login||u.email||"",name:u.display_name||u.login||"Пользователь",role:u.role||"user",created_at:u.created_at};
     });
   }
   async function refreshSharedLinks(){
@@ -723,21 +723,18 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     finally{ui.cloudBusy=false}
   }
   $("authForm").addEventListener("submit",async function(e){
-    e.preventDefault();var mode=ui.authMode,email=$("aLogin").value.trim().toLowerCase(),pw=$("aPass").value;
+    e.preventDefault();var login=$("aLogin").value.trim().toLowerCase(),pw=$("aPass").value;
     function err(m){$("aErr").textContent=m}
     $("aSubmit").disabled=true;
     try{
       if(!CLOUD)throw new Error("Не удалось загрузить модуль Supabase.");
-      if(!email||!pw)throw new Error("Введите email и пароль.");
-      if(mode==="register"){
-        if(pw!==$("aPass2").value)throw new Error("Пароли не совпадают.");
-        if(pw.length<6)throw new Error("Пароль должен содержать не менее 6 символов.");
-        var nm=$("aName").value.trim();if(!nm)throw new Error("Введите имя.");
-        var result=await CLOUD.signUp(email,pw,nm);
-        if(!result||!result.access_token){
-          showAuth("login");$("aErr").textContent="Аккаунт создан. Подтвердите email по ссылке из письма, затем войдите.";return;
-        }
-      }else await CLOUD.signIn(email,pw);
+      if(!login||!pw)throw new Error("Введите логин и пароль.");
+      if(ui.authMode==="register"){
+        if(!/^[a-z0-9._-]{3,32}$/.test(login))throw new Error("Логин должен содержать 3–32 символа: латинские буквы, цифры, точку, дефис или подчёркивание.");
+        if(pw.length<8)throw new Error("Пароль должен содержать не менее 8 символов.");
+        var nm=$("aName").value.trim();if(!nm)throw new Error("Введите отображаемое имя.");
+        await CLOUD.signUp(login,pw,nm);
+      }else await CLOUD.signIn(login,pw);
       var user=await CLOUD.getUser();if(!user)throw new Error("Не удалось получить профиль. Попробуйте войти ещё раз.");
       await activateCloudUser(user);
     }catch(ex){err(ex.message||"Ошибка входа. Проверьте данные и подключение.")}
