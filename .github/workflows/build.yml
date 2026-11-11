@@ -26,7 +26,7 @@ jobs:
       - name: Upload installer
         uses: actions/upload-artifact@v4
         with:
-          name: Moi-Kontakty-Windows-Installer
+          name: SamHelp-Windows-Installer
           path: release/*.exe
           if-no-files-found: error
           retention-days: 30
