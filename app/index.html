@@ -1493,7 +1493,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     if(!active){
       var el=selectedSiteElement();if(el)el.removeAttribute("data-site-selected");
       ui.siteSelected=null;
-    }else $("siteEditorStatus").textContent="Режим выбора: нажмите на элемент, который хотите изменить.";
+    }else{var theme=(ui.siteConfig&&ui.siteConfig.theme)||{};$("siteAccent").value=validHex(theme.accent,"#ff2e63");$("sitePageBg").value=validHex(theme.pageBg,"#f7f3f5");$("siteEditorStatus").textContent="Режим выбора: нажмите на элемент, который хотите изменить.";}
   }
   document.addEventListener("click",function(e){
     if(!ui.siteEditing)return;
