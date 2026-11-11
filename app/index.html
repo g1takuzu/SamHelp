@@ -665,6 +665,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     ["dlg","dlgLink","dlgStages","dlgUsers"].forEach(function(id){try{$(id).close()}catch(e){}});
     ui.me=null;CLOUD.signOut().catch(function(){});showAuth("login");
   };
+  function endSession(){ui.me=null;CLOUD.signOut().catch(function(){});}
 
   /* ---------- ссылки на чаты ---------- */
   function linkFor(c,k){
@@ -787,7 +788,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     ui.tab=t;
     [].forEach.call(document.querySelectorAll(".tab"),function(b){b.classList.toggle("on",b.getAttribute("data-tab")===t)});
     [].forEach.call(document.querySelectorAll(".view"),function(v){v.classList.toggle("on",v.id==="v-"+t)});
-    [].forEach.call(document.querySelectorAll("[data-tabs],[data-admin]"),function(b){
+    [].forEach.call(document.querySelectorAll("[data-tabs],[data-admin],[data-editor]"),function(b){
       var tabs=b.getAttribute("data-tabs"), hide=false;
       if(tabs&&tabs.split(" ").indexOf(t)<0) hide=true;
       if(b.hasAttribute("data-admin")&&!isAdmin()) hide=true;
