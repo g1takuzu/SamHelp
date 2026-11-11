@@ -1,7 +1,8 @@
+
 {
-  "name": "SamHelp",
+  "name": "samhelp",
   "version": "1.0.0",
-  "description": "SamHelp — приложение для управления контактами",
+  "description": "SamHelp — внутренний помощник сотрудников Самоката",
   "main": "electron/main.js",
   "author": "g1takuzu",
   "license": "UNLICENSED",
@@ -14,29 +15,23 @@
     "electron-builder": "^26.0.12"
   },
   "build": {
-    "appId": "ru.moikontakty.desktop",
-    "productName": "Мои контакты",
+    "appId": "ru.samhelp.desktop",
+    "productName": "SamHelp",
     "directories": {
       "output": "release"
     },
     "files": [
       "app/**/*",
       "electron/**/*",
+      "assets/**/*",
       "package.json"
     ],
     "asar": true,
     "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "icon": "assets/icon.ico",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "Moi-Kontakty-Setup-${version}.${ext}"
+      "target": "nsis",
+      "icon": "assets/icon.ico"
     },
+    "artifactName": "SamHelp-Setup-${version}.${ext}",
     "nsis": {
       "oneClick": false,
       "installerIcon": "assets/icon.ico",
@@ -45,7 +40,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Мои контакты",
+      "shortcutName": "SamHelp",
       "deleteAppDataOnUninstall": false
     }
   }
