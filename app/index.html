@@ -19,7 +19,35 @@
 html,body{margin:0;height:100%}
 body{font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
 button,input,select,textarea{font:inherit;color:inherit}
-.app{max-width:1100px;margin:0 auto;padding:20px 20px 60px}
+body{
+  background:
+    radial-gradient(ellipse at 8% 8%,rgba(255,46,99,.13),transparent 34%),
+    radial-gradient(ellipse at 92% 18%,rgba(124,92,255,.10),transparent 30%),
+    radial-gradient(ellipse at 78% 92%,rgba(255,138,0,.09),transparent 34%),
+    var(--bg);
+  background-attachment:fixed;
+}
+.app{width:100%;max-width:none;min-height:100vh;margin:0;padding:24px clamp(20px,3vw,48px) 60px}
+#appRoot{position:relative;isolation:isolate}
+#appRoot::before{
+  content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    radial-gradient(circle at 12% 32%,rgba(255,46,99,.055),transparent 22%),
+    radial-gradient(circle at 88% 70%,rgba(124,92,255,.05),transparent 24%);
+}
+@media (min-width:1500px){
+  .app{padding-left:clamp(48px,4vw,76px);padding-right:clamp(48px,4vw,76px)}
+  .grid{grid-template-columns:repeat(auto-fill,minmax(min(420px,100%),1fr));gap:20px}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:18px}
+}
+@media (max-width:760px){
+  .app{padding:12px 12px 36px}
+  header{padding:18px;border-radius:22px}
+  .hact{margin-left:0;justify-content:flex-start}
+  .tab{padding:9px 14px}
+  .urow{flex-wrap:wrap}
+  .urow .who{min-width:calc(100% - 60px)}
+}
 header{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px;padding:22px 26px;border-radius:30px;color:#fff;
   background:radial-gradient(circle at 100% 0,rgba(255,255,255,.22),transparent 45%),linear-gradient(135deg,#ff2e63 0%,#ff4f8b 100%);
   box-shadow:0 14px 34px rgba(255,46,99,.32)}
@@ -262,7 +290,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       <button class="tab" data-tab="apps">🚀 Программы</button>
       <div class="hact">
       <button class="btn" id="btnStages" data-tabs="people" data-admin>Стадии и amoCRM</button>
-      <button class="btn" id="btnUsers" data-admin style="display:none">Пользователи</button>
+      <button class="btn" id="btnUsers" data-admin>👥 Роли пользователей</button>
       <button class="btn" id="btnRestore" data-tabs="sheets apps" data-editor>Вернуть стандартные</button>
       <button class="btn" id="btnExport" data-admin>Сохранить копию</button>
       <button class="btn" id="btnImport" data-admin>Загрузить копию</button>
@@ -397,7 +425,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   <div class="dlg">
     <h2>Пользователи</h2>
     <div id="usersList"></div>
-    <div class="hint">Сотрудник видит только своих людей и свои личные ссылки. Администратор видит всех людей и редактирует общие ссылки во вкладках «Таблицы» и «Программы».</div>
+    <div class="hint">Здесь можно назначать роли «Пользователь», «Редактор» и «Администратор». Редакторы управляют общими таблицами и программами. Администраторы имеют полный доступ. Последнего администратора снять нельзя.</div>
     <div class="actions"><button class="btn primary" type="button" id="uClose">Готово</button></div>
   </div>
 </dialog>
@@ -621,7 +649,19 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
   async function activateCloudUser(user){
     var rr=await CLOUD.roles(),role=rr.admin?"admin":(rr.editor?"editor":"user"),meta=user.user_metadata||{};
     ui.me={id:user.id,login:user.email||"",email:user.email||"",name:meta.display_name||user.email||"Пользователь",role:role};
-    state.users=[ui.me];await refreshSharedLinks();save();enterApp();
+    state.users=[ui.me];
+    await refreshSharedLinks();
+    if(role==="admin"){
+      try{await loadAdminUsers()}catch(ex){toast("Не удалось загрузить список пользователей: "+(ex.message||ex))}
+    }
+    save();enterApp();
+  }
+  async function loadAdminUsers(){
+    if(!isAdmin())return;
+    var rows=await CLOUD.listUsers();
+    state.users=rows.map(function(u){
+      return {id:u.user_id,login:u.email||"",email:u.email||"",name:u.display_name||u.email||"Пользователь",role:u.role||"user",created_at:u.created_at};
+    });
   }
   async function refreshSharedLinks(){
     if(!ui.me||ui.cloudBusy)return;
@@ -1299,48 +1339,45 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     save(); renderAlerts(); render(); toast("Настройки сохранены");
   });
 
-  /* ---------- пользователи (админ) ---------- */
-  function adminCount(){return state.users.filter(function(u){return u.role==="admin"}).length}
+  /* ---------- пользователи и роли (админ, облако) ---------- */
   function renderUsers(){
     $("usersList").innerHTML=state.users.map(function(u){
       var me=ui.me&&u.id===ui.me.id;
       var n=state.contacts.filter(function(c){return c.owner===u.id}).length;
-      return '<div class="urow"><div class="avatar" style="background:'+colorFor(u.name)+';width:40px;height:40px;font-size:16px">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
-        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.login)+' · людей: '+n+'</div></div>'+
-        '<select data-act="role" data-id="'+u.id+'"'+(me?' disabled':'')+'><option value="user"'+(u.role==="user"?" selected":"")+'>Сотрудник</option><option value="admin"'+(u.role==="admin"?" selected":"")+'>Админ</option></select>'+
-        '<button class="icon" data-act="pw" data-id="'+u.id+'">Пароль</button>'+
-        (me?'':'<button class="icon" data-act="del" data-id="'+u.id+'">Удалить</button>')+'</div>';
-    }).join("")||'<div class="hint">Пока никого нет</div>';
+      var roleLabel=u.role==="admin"?"Администратор":(u.role==="editor"?"Редактор":"Пользователь");
+      var created=u.created_at?new Date(u.created_at).toLocaleDateString("ru-RU"):"";
+      return '<div class="urow"><div class="avatar" style="background:'+colorFor(u.name)+';width:42px;height:42px;font-size:16px">'+esc((u.name||"?").charAt(0).toUpperCase())+'</div>'+
+        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.email||u.login)+' · контактов на этом ПК: '+n+(created?' · с '+created:'')+'</div></div>'+
+        (u.role==="admin"?'<span class="pill" style="background:rgba(255,46,99,.12);color:var(--accent)">Администратор</span>':
+          '<select data-act="role" data-id="'+u.id+'"'+(me?' disabled':'')+'>'+
+            '<option value="user"'+(u.role==="user"?" selected":"")+'>Пользователь</option>'+
+            '<option value="editor"'+(u.role==="editor"?" selected":"")+'>Редактор</option>'+
+            '<option value="admin">Администратор</option></select>')+
+        '</div>';
+    }).join("")||'<div class="hint">Пока никто не зарегистрировался</div>';
   }
-  $("btnUsers").onclick=function(){if(!isAdmin())return;renderUsers();$("dlgUsers").showModal()};
+  $("btnUsers").onclick=async function(){
+    if(!isAdmin())return;
+    $("usersList").innerHTML='<div class="hint">Загружаю пользователей…</div>';
+    $("dlgUsers").showModal();
+    try{await loadAdminUsers();renderUsers()}
+    catch(ex){$("usersList").innerHTML='<div class="hint">Не удалось загрузить пользователей: '+esc(ex.message||ex)+'</div>'}
+  };
   $("uClose").onclick=function(){$("dlgUsers").close()};
-  $("usersList").addEventListener("click",async function(e){
-    var t=e.target.closest("[data-act]"); if(!t||!isAdmin()) return;
-    var act=t.getAttribute("data-act"), id=t.getAttribute("data-id");
-    var u=state.users.filter(function(x){return x.id===id})[0]; if(!u) return;
-    if(act==="pw"){
-      var p=await appPrompt("Новый пароль для «"+u.name+"» (минимум 4 символа):",{title:"Изменение пароля",password:true,okText:"Изменить"});
-      if(p===null) return;
-      if(p.length<4){toast("Пароль слишком короткий");return;}
-      u.salt=randHex(16); u.hash=hashPw(p,u.salt); save(); toast("Пароль изменён");
-    }else if(act==="del"){
-      if(u.role==="admin"&&adminCount()<2){toast("Нельзя удалить последнего администратора");return;}
-      var n=state.contacts.filter(function(c){return c.owner===u.id}).length;
-      if(await appConfirm("Удалить «"+u.name+"»?"+(n?" Его люди ("+n+") перейдут к вам.":""),"Удаление пользователя")){
-        state.contacts.forEach(function(c){if(c.owner===u.id)c.owner=ui.me.id});
-        state.pending.forEach(function(p){if(p.owner===u.id)p.owner=ui.me.id});
-        state.links.sheets=state.links.sheets.filter(function(x){return x.owner!==u.id});
-        state.links.apps=state.links.apps.filter(function(x){return x.owner!==u.id});
-        state.users=state.users.filter(function(x){return x.id!==u.id});
-        save(); renderUsers(); render(); renderAlerts(); toast("Удалено");
-      }
+  $("usersList").addEventListener("change",async function(e){
+    var t=e.target;
+    if(!isAdmin()||t.getAttribute("data-act")!=="role")return;
+    var id=t.getAttribute("data-id"),role=t.value;
+    t.disabled=true;
+    try{
+      await CLOUD.setUserRole(id,role);
+      await loadAdminUsers();
+      renderUsers();
+      toast("Роль пользователя обновлена");
+    }catch(ex){
+      toast(ex.message||"Не удалось изменить роль");
+      try{await loadAdminUsers();renderUsers()}catch(_){}
     }
-  });
-  $("usersList").addEventListener("change",function(e){
-    var t=e.target; if(!isAdmin()||t.getAttribute("data-act")!=="role") return;
-    var u=state.users.filter(function(x){return x.id===t.getAttribute("data-id")})[0]; if(!u) return;
-    if(t.value!=="admin"&&u.role==="admin"&&adminCount()<2){toast("Должен остаться хотя бы один администратор");renderUsers();return;}
-    u.role=t.value; save(); renderUsers(); toast("Роль изменена");
   });
 
   /* ---------- копии и экспорт ---------- */
