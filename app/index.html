@@ -385,7 +385,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       <div id="stageRows"></div>
       <button class="btn" type="button" id="sAdd">+ Стадия</button>
     </div>
-    <label class="remember"><input type="checkbox" id="sReg"> Разрешить сотрудникам самим регистрироваться</label>
+    <label class="remember"><input type="checkbox" id="sReg" checked disabled> Самостоятельная регистрация через Supabase включена</label>
     <div class="actions">
       <button class="btn" type="button" id="sCancel">Отмена</button>
       <button class="btn primary" type="submit">Сохранить</button>
@@ -1256,7 +1256,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     ui.rows=state.stages.map(function(s){return {orig:s,name:s,remind:state.settings.remindStages.indexOf(s)>-1}});
     $("sAmo").value=state.settings.amoUrl||"";
     $("sText").value=state.settings.remindText||"";
-    $("sReg").checked=!!state.settings.allowReg;
+    $("sReg").checked=true;
     renderStageRows(); $("dlgStages").showModal();
   };
   $("stageRows").addEventListener("click",function(e){
@@ -1294,7 +1294,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
     state.settings.remindStages=rows.filter(function(r){return r.remind}).map(function(r){return r.name});
     state.settings.amoUrl=normalizeUrl($("sAmo").value);
     state.settings.remindText=$("sText").value.trim()||DEFAULT_SETTINGS.remindText;
-    state.settings.allowReg=$("sReg").checked;
+    state.settings.allowReg=true;
     if(ui.stage&&names.indexOf(ui.stage)<0) ui.stage="";
     save(); renderAlerts(); render(); toast("Настройки сохранены");
   });
