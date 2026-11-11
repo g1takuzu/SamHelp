@@ -100,7 +100,7 @@ begin
     raise exception 'Нельзя изменить собственную роль';
   end if;
 
-  if new_role not in ('user', 'editor', 'admin') then
+  if new_role is null or new_role not in ('user', 'editor', 'admin') then
     raise exception 'Неизвестная роль';
   end if;
 
