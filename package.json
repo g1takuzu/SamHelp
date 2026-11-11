@@ -1,0 +1,49 @@
+{
+  "name": "moi-kontakty",
+  "version": "1.0.0",
+  "description": "Мои контакты — приложение для управления контактами",
+  "main": "electron/main.js",
+  "author": "Мои контакты",
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --win nsis"
+  },
+  "devDependencies": {
+    "electron": "^38.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ru.moikontakty.desktop",
+    "productName": "Мои контакты",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "app/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Moi-Kontakty-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Мои контакты",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
