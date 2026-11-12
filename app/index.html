@@ -1375,7 +1375,7 @@ dialog::backdrop{background:rgba(30,6,20,.5);backdrop-filter:blur(3px)}
       var roleLabel=u.role==="admin"?"Администратор":(u.role==="editor"?"Редактор":"Пользователь");
       var created=u.created_at?new Date(u.created_at).toLocaleDateString("ru-RU"):"";
       return '<div class="urow"><div class="avatar" style="background:'+colorFor(u.name)+';width:42px;height:42px;font-size:16px">'+esc((u.name||"?").charAt(0).toUpperCase())+'</div>'+
-        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.email||u.login)+'+(created?' · с '+created:'')+'</div></div>'+
+        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.email||u.login)+(created?' · с '+created:'')+'</div></div>'+
         (me?'<span class="pill" style="background:rgba(255,46,99,.12);color:var(--accent)">Вы · Администратор</span>':
           '<select data-act="role" data-id="'+u.id+'">'+
             '<option value="user"'+(u.role==="user"?" selected":"")+'>Пользователь</option>'+
