@@ -756,7 +756,7 @@ body.is-home .aurora{opacity:1}
     ]
   };
 
-  var state={contacts:[],pipelines:null,templates:null,links:null,users:[],settings:null,pending:[]};
+  var state={contacts:[],pipelines:null,templates:null,links:null,users:[],settings:null,pending:[],setupCompleted:false};
   var ui={me:null,tab:"home",pipe:"",status:"",bpipe:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",pr:[],drawerId:null,tplId:null,tplFor:null,dragId:null};
 
   var $=function(id){return document.getElementById(id)};
@@ -811,6 +811,7 @@ body.is-home .aurora{opacity:1}
     opts=opts||{}; d=d||{};
     if(Array.isArray(d.contacts)) state.contacts=d.contacts;
     if(!opts.keepUsers&&Array.isArray(d.users)) state.users=d.users;
+    if(d.setupCompleted===true||(Array.isArray(d.users)&&d.users.some(function(u){return u.role==="admin"}))) state.setupCompleted=true;
     if(d.links&&Array.isArray(d.links.sheets)&&Array.isArray(d.links.apps)) state.links=d.links;
     if(d.settings) state.settings=d.settings;
     if(Array.isArray(d.pending)) state.pending=d.pending;
@@ -818,12 +819,25 @@ body.is-home .aurora{opacity:1}
     if(Array.isArray(d.pipelines)&&d.pipelines.length) state.pipelines=d.pipelines;
     normalize();
   }
-  function load(){
-    try{var raw=localStorage.getItem(KEY); if(raw) adopt(JSON.parse(raw));}catch(e){}
-    normalize(); save();
+  async function load(){
+    var raw=null;
+    // В Electron основное хранилище находится в userData, а не в file:// localStorage.
+    if(window.samhelp&&window.samhelp.loadState) raw=await window.samhelp.loadState();
+    if(!raw){try{raw=localStorage.getItem(KEY)}catch(e){}}
+    if(raw){
+      var saved=JSON.parse(raw);
+      adopt(saved);
+      if(Array.isArray(saved.users)&&saved.users.some(function(u){return u.role==="admin"})) state.setupCompleted=true;
+    }
+    normalize();
+    save();
   }
   function save(){
-    try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){toast("Не удалось сохранить в браузере — сделайте копию вручную");}
+    var raw=JSON.stringify(state);
+    try{localStorage.setItem(KEY,raw)}catch(e){toast("Не удалось сохранить в браузере — сделайте копию вручную");}
+    if(window.samhelp&&window.samhelp.saveState){
+      window.samhelp.saveState(raw).catch(function(){toast("Не удалось сохранить данные SamHelp на диск");});
+    }
   }
 
   /* ---------- общие помощники ---------- */
@@ -944,7 +958,10 @@ body.is-home .aurora{opacity:1}
     if(String(pw||"").length<4) return {err:"Пароль — минимум 4 символа"};
     var salt=randHex(16);
     var u={id:uid(),login:login,name:String(name||"").trim()||login,salt:salt,hash:hashPw(pw,salt),role:role,created:Date.now()};
-    state.users.push(u); save();
+    if(role==="admin"&&state.setupCompleted) return {err:"Первый администратор уже создан. Используйте обычный вход."};
+    state.users.push(u);
+    if(role==="admin") state.setupCompleted=true;
+    save();
     return {user:u};
   }
   function tryLogin(mode,login,pw){
@@ -2323,9 +2340,15 @@ body.is-home .aurora{opacity:1}
   $("zoomOut").onclick=function(){setZoom(-.1)};
 
   /* ---------- запуск ---------- */
-  function boot(){
+  async function boot(){
     applyZoom(readZoom());
-    load();
+    try{await load();}
+    catch(e){
+      console.error("SamHelp state load failed",e);
+      showAuth("login");
+      toast("Не удалось загрузить сохранённые данные. Повторите запуск.");
+      return;
+    }
     ensureBackup();
     setInterval(tickReminders,30000);
     setInterval(ensureBackup,600000);
@@ -2333,7 +2356,7 @@ body.is-home .aurora{opacity:1}
     try{sid=sessionStorage.getItem(SKEY)||localStorage.getItem(SKEY)}catch(e){}
     var u=sid&&state.users.filter(function(x){return x.id===sid})[0];
     if(u){ui.me=u;enterApp();}
-    else showAuth(state.users.length?"login":"setup");
+    else showAuth(state.setupCompleted||state.users.length?"login":"setup");
   }
   boot();
 })();
