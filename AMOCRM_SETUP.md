@@ -39,9 +39,22 @@ Electron/renderer не получает OAuth access token, refresh token или
 - `AMO_CLIENT_ID` — ID интеграции amoCRM;
 - `AMO_CLIENT_SECRET` — секрет интеграции;
 - `AMO_REDIRECT_URI` — точный callback URL зарегистрированной интеграции;
-- `AMO_TOKEN_ENCRYPTION_KEY` — случайный секрет не менее 32 байт для шифрования OAuth-токенов.
+- `AMO_TOKEN_ENCRYPTION_KEY` — Base64 от случайных 32 байт для AES-GCM шифрования OAuth-токенов.
+
+Callback URL зарегистрированной интеграции должен в точности совпадать с `AMO_REDIRECT_URI`. Для текущего проекта это URL функции `amo-oauth-callback` в Supabase, например `https://<project-ref>.supabase.co/functions/v1/amo-oauth-callback`.
 
 Системные `SUPABASE_URL`, `SUPABASE_ANON_KEY` и `SUPABASE_SERVICE_ROLE_KEY` предоставляет среда Supabase Functions. Никогда не добавляйте их секретные значения в GitHub или Electron.
+
+## Развёртывание OAuth-основы
+
+После применения миграции и настройки секретов:
+
+1. Развернуть `amo-oauth-start` с JWT-проверкой включённой.
+2. Развернуть `amo-oauth-callback` с JWT-проверкой выключенной: OAuth callback вызывается amoCRM, а не с пользовательским JWT. Защита callback обеспечивается одноразовым state.
+3. Развернуть `amo-connection-status` с JWT-проверкой включённой.
+4. Зарегистрировать callback URL в настройках интеграции amoCRM.
+
+Эти функции пока не вызываются интерфейсом SamHelp: сначала необходимо подключить Supabase Auth к текущему экрану входа.
 
 ## Следующие этапы
 
