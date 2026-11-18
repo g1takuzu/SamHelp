@@ -998,9 +998,15 @@ body.is-home .aurora{opacity:1}
           if(Object.prototype.hasOwnProperty.call(cloudContactSnapshot,id)){
             window.SamHelpCloud.deletePrivateContact(id).catch(function(ex){console.error("Contact delete sync failed",ex)});
           }else next.push(serverItem);
-        }else if(Number(serverItem.updated||0)>Number(localItem.updated||0)){
-          next.push(serverItem);
-        }else next.push(localItem);
+        }else{
+          var baseline=cloudContactSnapshot[id];
+          var localChanged=baseline!==undefined&&JSON.stringify(localItem)!==baseline;
+          var remoteChanged=baseline!==undefined&&JSON.stringify(serverItem)!==baseline;
+          if(remoteChanged&&!localChanged) next.push(serverItem);
+          else if(localChanged&&!remoteChanged) next.push(localItem);
+          else if(remoteChanged&&localChanged) next.push(Number(serverItem.updated||0)>Number(localItem.updated||0)?serverItem:localItem);
+          else next.push(localItem);
+        }
       });
       Object.keys(localById).forEach(function(id){
         if(!Object.prototype.hasOwnProperty.call(remoteById,id)&&!Object.prototype.hasOwnProperty.call(cloudContactSnapshot,id)) next.push(localById[id]);
@@ -1015,6 +1021,7 @@ body.is-home .aurora{opacity:1}
       }
       cloudContactSnapshot=snapshotContacts(remote.filter(function(x){return next.some(function(y){return String(y.id)===String(x.id)})}));
       queueCloudContactSave();
+      refreshAmoStatuses(false);
     }catch(ex){console.error("Private contacts cloud refresh failed",ex);}
     finally{cloudApplying=false;cloudPullBusy=false;}
   }
@@ -1232,6 +1239,7 @@ body.is-home .aurora{opacity:1}
     if(cloudConfigPoll) clearInterval(cloudConfigPoll);
     if(cloudLinksPoll) clearInterval(cloudLinksPoll);
     if(amoStatusPoll) clearInterval(amoStatusPoll);
+    amoConnectionCache=null;amoConnectionCheckedAt=0;
     cloudContactsReady=false;cloudContactSnapshot=Object.create(null);
     ui.me=null;
     try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
