@@ -273,7 +273,6 @@
     listPrivateContacts: listPrivateContacts, upsertPrivateContact: upsertPrivateContact,
     upsertPrivateContacts: upsertPrivateContacts, deletePrivateContact: deletePrivateContact,
     getSharedAppConfig: getSharedAppConfig, updateSharedAppConfig: updateSharedAppConfig,
-    listPrivateContacts: listPrivateContacts, upsertPrivateContacts: upsertPrivateContacts,
-    deletePrivateContact: deletePrivateContact, subscribeCloud: subscribeCloud
+    subscribeCloud: subscribeCloud
   };
 })();
