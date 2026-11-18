@@ -717,6 +717,7 @@ body.is-home .aurora{opacity:1}
 <div class="stpop" id="stPop" hidden></div>
 <div class="toast" id="toast"></div>
 
+<script src="./supabase.js"></script>
 <script>
 (function(){
   var KEY="moi_kontakty_v1", SKEY="moi_kontakty_session";
@@ -981,6 +982,7 @@ body.is-home .aurora{opacity:1}
   function endSession(){
     ui.me=null;
     try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
+    if(window.SamHelpCloud) window.SamHelpCloud.signOut().catch(function(){});
   }
 
   var AUTH_TEXT={
@@ -1013,23 +1015,42 @@ body.is-home .aurora{opacity:1}
     $("aPass").type=show?"text":"password"; $("aPass2").type=show?"text":"password";
     $("aEye").textContent=show?"скрыть":"показать";
   };
-  $("authForm").addEventListener("submit",function(e){
+  $("authForm").addEventListener("submit",async function(e){
     e.preventDefault();
-    var m=ui.authMode, login=$("aLogin").value, pw=$("aPass").value, r;
+    var m=ui.authMode, login=$("aLogin").value.trim(), pw=$("aPass").value;
     function err(t){$("aErr").textContent=t}
-    if(m==="setup"||m==="register"){
-      if(m==="register"&&!state.settings.allowReg) return err("Регистрация закрыта администратором");
-      if(pw!==$("aPass2").value) return err("Пароли не совпадают");
-      r=createUser(login,$("aName").value,pw,m==="setup"?"admin":"user");
-      if(r.err) return err(r.err);
-      if(m==="setup"){state.contacts.forEach(function(c){if(!c.owner)c.owner=r.user.id});save()}
-    }else{
-      r=tryLogin(m,login,pw);
-      if(r.err) return err(r.err);
+    var cloud=window.SamHelpCloud;
+    if(!cloud||!cloud.configured) return err("Не удалось подключить Supabase. Проверьте сборку приложения.");
+    $("aSubmit").disabled=true;
+    $("aSubmit").textContent="Подождите…";
+    try{
+      if(m==="setup"||m==="register"){
+        if(m==="register"&&!state.settings.allowReg) return err("Регистрация закрыта администратором");
+        if(pw!==$("aPass2").value) return err("Пароли не совпадают");
+        if(login.length<3||/\\s/.test(login)) return err("Логин должен быть от 3 символов и без пробелов");
+        if(pw.length<6) return err("Пароль должен содержать не менее 6 символов");
+        await cloud.signUp(login,pw,$("aName").value.trim()||login);
+      }else{
+        await cloud.signIn(login,pw);
+      }
+      var authUser=await cloud.getUser();
+      if(!authUser) throw new Error("Не удалось получить пользователя после входа. Попробуйте ещё раз.");
+      var roleInfo=await cloud.roles();
+      var profile=authUser.user_metadata||{};
+      var user={id:authUser.id,login:profile.login||login,name:profile.display_name||profile.login||login,
+        role:roleInfo.admin?"admin":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
+      state.users=[user]; state.setupCompleted=true;
+      ui.me=user;
+      save();
+      $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";
+      enterApp();
+      if(m==="setup"||m==="register") toast("Аккаунт создан. Для первого администратора потребуется назначить роль в Supabase.");
+    }catch(ex){
+      err(ex&&ex.message?ex.message:"Не удалось выполнить вход");
+    }finally{
+      $("aSubmit").disabled=false;
+      $("aSubmit").textContent=AUTH_TEXT[ui.authMode].b;
     }
-    startSession(r.user,$("aRemember").checked);
-    $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";
-    enterApp();
   });
   function enterApp(){
     $("auth").hidden=true; $("appRoot").hidden=false;
@@ -1038,7 +1059,7 @@ body.is-home .aurora{opacity:1}
   }
   $("btnLogout").onclick=function(){
     ["dlg","dlgLink","dlgStages","dlgUsers","dlgTpl","dlgTplUse","dlgImport","dlgBackups","appMessageDialog"].forEach(function(id){try{$(id).close()}catch(e){}}); closeDrawer(); closeStMenu(); renderAlerts.last=null;
-    endSession(); showAuth(state.users.length?"login":"setup");
+    endSession(); showAuth("login");
   };
 
   /* ---------- ссылки на чаты ---------- */
@@ -2352,11 +2373,17 @@ body.is-home .aurora{opacity:1}
     ensureBackup();
     setInterval(tickReminders,30000);
     setInterval(ensureBackup,600000);
-    var sid=null;
-    try{sid=sessionStorage.getItem(SKEY)||localStorage.getItem(SKEY)}catch(e){}
-    var u=sid&&state.users.filter(function(x){return x.id===sid})[0];
-    if(u){ui.me=u;enterApp();}
-    else showAuth(state.setupCompleted||state.users.length?"login":"setup");
+    try{
+      var cloud=window.SamHelpCloud;
+      var authUser=cloud&&await cloud.getUser();
+      if(authUser){
+        var roleInfo=await cloud.roles(), profile=authUser.user_metadata||{};
+        var user={id:authUser.id,login:profile.login||authUser.email,name:profile.display_name||profile.login||authUser.email,
+          role:roleInfo.admin?"admin":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
+        state.users=[user];state.setupCompleted=true;ui.me=user;save();enterApp();return;
+      }
+    }catch(authError){console.error("Supabase session restore failed",authError);}
+    showAuth("login");
   }
   boot();
 })();
