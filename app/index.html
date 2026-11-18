@@ -473,7 +473,8 @@ body.is-home .aurora{opacity:1}
       <button class="tab" data-tab="sheets">📊 Таблицы</button>
       <button class="tab" data-tab="apps">🚀 Программы</button>
       <div class="hact">
-      <button class="btn" id="btnStages" data-tabs="people board" data-admin>Воронки и amoCRM</button>
+      <button class="btn" id="btnAmoConnect" data-tabs="people board">Подключить amoCRM</button>
+      <button class="btn" id="btnStages" data-tabs="people board" data-admin>Воронки и статусы</button>
       <button class="btn" id="btnUsers" data-admin>Пользователи</button>
       <button class="btn" id="btnRestore" data-tabs="sheets apps" data-admin>Вернуть стандартные</button>
       <button class="btn" id="btnBackups" data-admin>Автокопии</button>
@@ -760,6 +761,17 @@ body.is-home .aurora{opacity:1}
 <aside class="drawer" id="drawer" aria-label="Карточка человека"></aside>
 <div class="stpop" id="stPop" hidden></div>
 <div class="toast" id="toast"></div>
+
+<dialog id="dlgAmoConnect">
+  <form method="dialog" class="dlgform">
+    <div class="dlghead"><h2>Подключение amoCRM</h2><button class="icon" value="cancel">✕</button></div>
+    <p class="hint">Каждый сотрудник подключает свой аккаунт. Статусы в SamHelp будут только читаться из amoCRM и не будут отправляться обратно.</p>
+    <div id="amoConnectStatus" class="hint">Проверяем подключение…</div>
+    <div id="amoOauthButton" class="field"></div>
+    <p class="hint">Для установки интеграции в аккаунте amoCRM могут потребоваться права администратора. Если их нет, попросите администратора аккаунта выполнить подключение.</p>
+    <div class="actions"><div class="spacer"></div><button class="btn" value="cancel">Закрыть</button></div>
+  </form>
+</dialog>
 
 <script src="./supabase.js"></script>
 <script>
@@ -2454,6 +2466,51 @@ body.is-home .aurora{opacity:1}
         '<button type="button" class="btn" data-act="sadd">+ Статус</button></div>';
     }).join("");
   }
+  var amoConnectPollTimer=null;
+  $("btnAmoConnect").onclick=async function(){
+    var dlg=$("dlgAmoConnect"), status=$("amoConnectStatus"), host=$("amoOauthButton");
+    host.innerHTML=""; status.textContent="Проверяем подключение…";
+    dlg.showModal();
+    try{
+      var current=await window.SamHelpCloud.getAmoConnectionStatus();
+      amoConnectionCache=current;amoConnectionCheckedAt=Date.now();
+      status.textContent=current.connected
+        ?("Уже подключено: "+(current.account_subdomain||"аккаунт amoCRM")+". Можно переподключить ниже.")
+        :"Аккаунт пока не подключён. Нажмите кнопку amoCRM ниже.";
+      var setup=await window.SamHelpCloud.startAmoOAuth();
+      var script=document.createElement("script");
+      script.className="amocrm_oauth";script.charset="utf-8";
+      script.dataset.name=setup.integration.name;
+      script.dataset.description=setup.integration.description;
+      script.dataset.redirect_uri=setup.redirect_uri;
+      script.dataset.secrets_uri=setup.secrets_uri;
+      script.dataset.scopes=setup.integration.scopes;
+      script.dataset.title=setup.integration.title||"Подключить amoCRM";
+      script.dataset.state=setup.state;
+      script.dataset.mode=setup.integration.mode||"popup";
+      script.src="https://www.amocrm.ru/auth/button.min.js";
+      script.onerror=function(){status.textContent="Не удалось загрузить кнопку amoCRM. Проверьте подключение к интернету."};
+      host.appendChild(script);
+      status.textContent+=" Для продолжения потребуется подтвердить доступ в amoCRM.";
+      if(amoConnectPollTimer) clearInterval(amoConnectPollTimer);
+      amoConnectPollTimer=setInterval(async function(){
+        try{
+          var next=await window.SamHelpCloud.getAmoConnectionStatus();
+          if(next.connected){
+            amoConnectionCache=next;amoConnectionCheckedAt=Date.now();
+            status.textContent="Подключено: "+(next.account_subdomain||"amoCRM")+". Загружаем статусы контактов…";
+            clearInterval(amoConnectPollTimer);amoConnectPollTimer=null;
+            refreshAmoStatuses(true);
+          }
+        }catch(ex){console.error("amoCRM connection poll failed",ex)}
+      },3000);
+    }catch(ex){
+      status.textContent="Не удалось начать подключение: "+(ex.message||"ошибка");
+    }
+  };
+  $("dlgAmoConnect").addEventListener("close",function(){
+    if(amoConnectPollTimer){clearInterval(amoConnectPollTimer);amoConnectPollTimer=null}
+  });
   $("btnStages").onclick=function(){
     if(!isAdmin()) return;
     ui.pr=clone(state.pipelines);
