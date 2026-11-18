@@ -880,18 +880,40 @@ body.is-home .aurora{opacity:1}
     save();
   }
   var cloudContactsReady=false, cloudApplying=false, cloudSaveTimer=null, cloudPullBusy=false;
+  var cloudContactSnapshot=Object.create(null), cloudUnsubscribe=null, cloudContactsPoll=null, cloudConfigPoll=null;
+  function snapshotContacts(items){
+    var out=Object.create(null);
+    (items||[]).forEach(function(item){out[String(item.id)]=JSON.stringify(item)});
+    return out;
+  }
   function queueCloudContactSave(){
     if(!cloudContactsReady||cloudApplying||!ui.me||!ui.me.cloud||!window.SamHelpCloud) return;
     clearTimeout(cloudSaveTimer);
-    cloudSaveTimer=setTimeout(function(){
-      var api=window.SamHelpCloud;
-      api.upsertPrivateContacts(state.contacts.filter(function(c){return c.owner===ui.me.id}))
-        .catch(function(ex){console.error("Private contacts cloud save failed",ex);toast("Не удалось синхронизировать контакты: "+(ex.message||"ошибка"));});
-    },700);
+    cloudSaveTimer=setTimeout(async function(){
+      var api=window.SamHelpCloud, local=state.contacts.filter(function(c){return c.owner===ui.me.id});
+      var current=Object.create(null), changed=[];
+      local.forEach(function(item){
+        var id=String(item.id);current[id]=JSON.stringify(item);
+        if(cloudContactSnapshot[id]!==current[id]) changed.push(item);
+      });
+      var removed=Object.keys(cloudContactSnapshot).filter(function(id){return !Object.prototype.hasOwnProperty.call(current,id)});
+      try{
+        if(changed.length) await api.upsertPrivateContacts(changed);
+        for(var i=0;i<removed.length;i++) await api.deletePrivateContact(removed[i]);
+        cloudContactSnapshot=snapshotContacts(local);
+      }catch(ex){
+        console.error("Private contacts cloud save failed",ex);
+        toast("Не удалось синхронизировать контакты: "+(ex.message||"ошибка"));
+      }
+    },500);
   }
   var sharedConfigSnapshot="";
   function sharedConfigPayload(){
-    return {pipelines:state.pipelines,settings:{remindText:state.settings.remindText,allowReg:!!state.settings.allowReg}};
+    return {
+      pipelines:state.pipelines,
+      templates:(state.templates||[]).filter(function(t){return !t.owner}),
+      settings:{remindText:state.settings.remindText,allowReg:!!state.settings.allowReg}
+    };
   }
   async function pullSharedConfig(){
     if(!ui.me||!ui.me.cloud||!window.SamHelpCloud) return;
@@ -901,13 +923,16 @@ body.is-home .aurora{opacity:1}
       var snap=JSON.stringify(cfg);
       if(snap===sharedConfigSnapshot) return;
       sharedConfigSnapshot=snap;
+      var personal=(state.templates||[]).filter(function(t){return t.owner&&t.owner===ui.me.id});
       if(Array.isArray(cfg.pipelines)&&cfg.pipelines.length) state.pipelines=cfg.pipelines;
+      if(Array.isArray(cfg.templates)) state.templates=cfg.templates.concat(personal);
       if(cfg.settings&&typeof cfg.settings==="object"){
         if(typeof cfg.settings.remindText==="string") state.settings.remindText=cfg.settings.remindText;
         if(typeof cfg.settings.allowReg==="boolean") state.settings.allowReg=cfg.settings.allowReg;
       }
-      normalize(); save(); render();
+      cloudApplying=true; normalize(); save(); cloudApplying=false; render();
     }catch(ex){console.error("Shared config refresh failed",ex);}
+    finally{cloudApplying=false;}
   }
   function publishSharedConfig(){
     if(!ui.me||!ui.me.cloud||!isAdmin()||!window.SamHelpCloud) return;
@@ -925,17 +950,44 @@ body.is-home .aurora{opacity:1}
     cloudPullBusy=true;
     try{
       var remote=await window.SamHelpCloud.listPrivateContacts();
-      var local=state.contacts.filter(function(c){return c.owner===ui.me.id});
-      if(JSON.stringify(remote)!==JSON.stringify(local)){
+      var remoteById=Object.create(null), localById=Object.create(null), next=[];
+      remote.forEach(function(item){item.owner=ui.me.id;remoteById[String(item.id)]=item});
+      state.contacts.filter(function(item){return item.owner===ui.me.id}).forEach(function(item){localById[String(item.id)]=item});
+      Object.keys(remoteById).forEach(function(id){
+        var serverItem=remoteById[id], localItem=localById[id];
+        if(!localItem){
+          if(Object.prototype.hasOwnProperty.call(cloudContactSnapshot,id)){
+            window.SamHelpCloud.deletePrivateContact(id).catch(function(ex){console.error("Contact delete sync failed",ex)});
+          }else next.push(serverItem);
+        }else if(Number(serverItem.updated||0)>Number(localItem.updated||0)){
+          next.push(serverItem);
+        }else next.push(localItem);
+      });
+      Object.keys(localById).forEach(function(id){
+        if(!Object.prototype.hasOwnProperty.call(remoteById,id)&&!Object.prototype.hasOwnProperty.call(cloudContactSnapshot,id)) next.push(localById[id]);
+      });
+      var before=JSON.stringify(state.contacts.filter(function(x){return x.owner===ui.me.id}));
+      var after=JSON.stringify(next);
+      if(before!==after){
         cloudApplying=true;
-        state.contacts=state.contacts.filter(function(c){return c.owner!==ui.me.id}).concat(remote);
-        save();
-        cloudApplying=false;
-        render();
+        state.contacts=state.contacts.filter(function(x){return x.owner!==ui.me.id}).concat(next);
+        save(); cloudApplying=false; render();
         if(ui.drawerId) refreshDrawer(ui.drawerId);
       }
+      cloudContactSnapshot=snapshotContacts(remote.filter(function(x){return next.some(function(y){return String(y.id)===String(x.id)})}));
+      queueCloudContactSave();
     }catch(ex){console.error("Private contacts cloud refresh failed",ex);}
     finally{cloudApplying=false;cloudPullBusy=false;}
+  }
+  function startCloudListeners(){
+    if(cloudUnsubscribe){cloudUnsubscribe();cloudUnsubscribe=null}
+    if(window.SamHelpCloud&&window.SamHelpCloud.subscribeCloud){
+      cloudUnsubscribe=window.SamHelpCloud.subscribeCloud(function(){pullCloudContacts();pullSharedConfig()});
+    }
+    if(cloudContactsPoll) clearInterval(cloudContactsPoll);
+    if(cloudConfigPoll) clearInterval(cloudConfigPoll);
+    cloudContactsPoll=setInterval(pullCloudContacts,30000);
+    cloudConfigPoll=setInterval(pullSharedConfig,30000);
   }
   function save(){
     var raw=JSON.stringify(state);
@@ -1085,6 +1137,10 @@ body.is-home .aurora{opacity:1}
     }catch(e){}
   }
   function endSession(){
+    if(cloudUnsubscribe){cloudUnsubscribe();cloudUnsubscribe=null}
+    if(cloudContactsPoll) clearInterval(cloudContactsPoll);
+    if(cloudConfigPoll) clearInterval(cloudConfigPoll);
+    cloudContactsReady=false;cloudContactSnapshot=Object.create(null);
     ui.me=null;
     try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
     if(window.SamHelpCloud) window.SamHelpCloud.signOut().catch(function(){});
@@ -1143,9 +1199,14 @@ body.is-home .aurora{opacity:1}
       var roleInfo=await cloud.roles();
       var profile=authUser.user_metadata||{};
       var user={id:authUser.id,login:profile.login||login,name:profile.display_name||profile.login||login,
-        role:roleInfo.admin?"admin":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
+        role:roleInfo.admin?"admin":roleInfo.editor?"editor":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
       state.users=[user]; state.setupCompleted=true;
       ui.me=user;
+      state.contacts=await cloud.listPrivateContacts();
+      cloudContactSnapshot=snapshotContacts(state.contacts);
+      cloudContactsReady=true;
+      await pullSharedConfig();
+      startCloudListeners();
       save();
       $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";
       enterApp();
@@ -2605,21 +2666,13 @@ body.is-home .aurora{opacity:1}
       if(authUser){
         var roleInfo=await cloud.roles(), profile=authUser.user_metadata||{};
         var user={id:authUser.id,login:profile.login||authUser.email,name:profile.display_name||profile.login||authUser.email,
-          role:roleInfo.admin?"admin":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
+          role:roleInfo.admin?"admin":roleInfo.editor?"editor":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
         state.users=[user];state.setupCompleted=true;ui.me=user;
-        // Для облачной учётной записи загружаем только её собственные контакты.
-        // Локальный общий файл не используется как источник контактов после входа.
         state.contacts=await cloud.listPrivateContacts();
+        cloudContactSnapshot=snapshotContacts(state.contacts);
         cloudContactsReady=true;
         await pullSharedConfig();
-        save();enterApp();
-        // Supabase Realtime уведомляет об изменениях; периодическая проверка остаётся резервом.
-        if(cloud.subscribeCloud) cloud.subscribeCloud(function(){
-          pullCloudContacts();
-          pullSharedConfig();
-        });
-        setInterval(pullCloudContacts,30000);
-        setInterval(pullSharedConfig,30000);
+        save();enterApp();startCloudListeners();
         return;
       }
     }catch(authError){console.error("Supabase session restore failed",authError);}
