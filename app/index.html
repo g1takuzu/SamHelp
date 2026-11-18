@@ -879,12 +879,40 @@ body.is-home .aurora{opacity:1}
     normalize();
     save();
   }
+  var cloudContactsReady=false, cloudApplying=false, cloudSaveTimer=null, cloudPullBusy=false;
+  function queueCloudContactSave(){
+    if(!cloudContactsReady||cloudApplying||!ui.me||!ui.me.cloud||!window.SamHelpCloud) return;
+    clearTimeout(cloudSaveTimer);
+    cloudSaveTimer=setTimeout(function(){
+      var api=window.SamHelpCloud;
+      api.upsertPrivateContacts(state.contacts.filter(function(c){return c.owner===ui.me.id}))
+        .catch(function(ex){console.error("Private contacts cloud save failed",ex);toast("Не удалось синхронизировать контакты: "+(ex.message||"ошибка"));});
+    },700);
+  }
+  async function pullCloudContacts(){
+    if(!ui.me||!ui.me.cloud||!window.SamHelpCloud||cloudPullBusy) return;
+    cloudPullBusy=true;
+    try{
+      var remote=await window.SamHelpCloud.listPrivateContacts();
+      var local=state.contacts.filter(function(c){return c.owner===ui.me.id});
+      if(JSON.stringify(remote)!==JSON.stringify(local)){
+        cloudApplying=true;
+        state.contacts=state.contacts.filter(function(c){return c.owner!==ui.me.id}).concat(remote);
+        save();
+        cloudApplying=false;
+        render();
+        if(ui.drawerId) refreshDrawer(ui.drawerId);
+      }
+    }catch(ex){console.error("Private contacts cloud refresh failed",ex);}
+    finally{cloudApplying=false;cloudPullBusy=false;}
+  }
   function save(){
     var raw=JSON.stringify(state);
     try{localStorage.setItem(KEY,raw)}catch(e){toast("Не удалось сохранить в браузере — сделайте копию вручную");}
     if(window.samhelp&&window.samhelp.saveState){
       window.samhelp.saveState(raw).catch(function(){toast("Не удалось сохранить данные SamHelp на диск");});
     }
+    queueCloudContactSave();
   }
 
   /* ---------- общие помощники ---------- */
@@ -1484,7 +1512,7 @@ body.is-home .aurora{opacity:1}
   }
 
   /* ---------- люди ---------- */
-  function mine(){return state.contacts.filter(function(c){return isAdmin()||c.owner===ui.me.id})}
+  function mine(){return state.contacts.filter(function(c){return !!ui.me&&c.owner===ui.me.id})}
   function filtered(){
     var q=$("q").value.trim().toLowerCase(), m=$("fMsgr").value, qd=digits(q), ow=isAdmin()?$("fOwner").value:"";
     var src=$("flSource").value, city=$("flCity").value, vac=$("flVac").value, tag=$("flTag").value;
@@ -2177,6 +2205,9 @@ body.is-home .aurora{opacity:1}
     if(!ui.editId) return;
     if(await appConfirm("Удалить этот контакт насовсем?","Удаление контакта")){
       var id=ui.editId;
+      if(ui.me&&ui.me.cloud&&window.SamHelpCloud){
+        try{await window.SamHelpCloud.deletePrivateContact(id)}catch(ex){toast("Не удалось удалить контакт из облака: "+(ex.message||"ошибка"));return;}
+      }
       state.contacts=state.contacts.filter(function(x){return x.id!==id});
       state.pending=state.pending.filter(function(p){return p.contactId!==id});
       if(ui.drawerId===id) closeDrawer();
@@ -2556,7 +2587,14 @@ body.is-home .aurora{opacity:1}
         var roleInfo=await cloud.roles(), profile=authUser.user_metadata||{};
         var user={id:authUser.id,login:profile.login||authUser.email,name:profile.display_name||profile.login||authUser.email,
           role:roleInfo.admin?"admin":"user",created:Date.parse(authUser.created_at||"")||Date.now(),cloud:true};
-        state.users=[user];state.setupCompleted=true;ui.me=user;save();enterApp();return;
+        state.users=[user];state.setupCompleted=true;ui.me=user;
+        // Для облачной учётной записи загружаем только её собственные контакты.
+        // Локальный общий файл не используется как источник контактов после входа.
+        state.contacts=await cloud.listPrivateContacts();
+        cloudContactsReady=true;
+        save();enterApp();
+        setInterval(pullCloudContacts,5000);
+        return;
       }
     }catch(authError){console.error("Supabase session restore failed",authError);}
     showAuth("login");
