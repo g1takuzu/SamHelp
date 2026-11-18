@@ -880,7 +880,7 @@ body.is-home .aurora{opacity:1}
     save();
   }
   var cloudContactsReady=false, cloudApplying=false, cloudSaveTimer=null, cloudPullBusy=false;
-  var cloudContactSnapshot=Object.create(null), cloudUnsubscribe=null, cloudContactsPoll=null, cloudConfigPoll=null;
+  var cloudContactSnapshot=Object.create(null), cloudUnsubscribe=null, cloudContactsPoll=null, cloudConfigPoll=null, cloudLinksPoll=null;
   function snapshotContacts(items){
     var out=Object.create(null);
     (items||[]).forEach(function(item){out[String(item.id)]=JSON.stringify(item)});
@@ -919,7 +919,7 @@ body.is-home .aurora{opacity:1}
     if(!ui.me||!ui.me.cloud||!window.SamHelpCloud) return;
     try{
       var cfg=await window.SamHelpCloud.getSharedAppConfig();
-      if(!cfg||!Object.keys(cfg).length) return;
+      if(!cfg||!Object.keys(cfg).length){if(isAdmin()) publishSharedConfig();return;}
       var snap=JSON.stringify(cfg);
       if(snap===sharedConfigSnapshot) return;
       sharedConfigSnapshot=snap;
@@ -1009,12 +1009,14 @@ body.is-home .aurora{opacity:1}
   function startCloudListeners(){
     if(cloudUnsubscribe){cloudUnsubscribe();cloudUnsubscribe=null}
     if(window.SamHelpCloud&&window.SamHelpCloud.subscribeCloud){
-      cloudUnsubscribe=window.SamHelpCloud.subscribeCloud(function(){pullCloudContacts();pullSharedConfig()});
+      cloudUnsubscribe=window.SamHelpCloud.subscribeCloud(function(){pullCloudContacts();pullSharedConfig();pullSharedLinks()});
     }
     if(cloudContactsPoll) clearInterval(cloudContactsPoll);
     if(cloudConfigPoll) clearInterval(cloudConfigPoll);
+    if(cloudLinksPoll) clearInterval(cloudLinksPoll);
     cloudContactsPoll=setInterval(pullCloudContacts,30000);
     cloudConfigPoll=setInterval(pullSharedConfig,30000);
+    cloudLinksPoll=setInterval(pullSharedLinks,30000);
   }
   function save(){
     var raw=JSON.stringify(state);
@@ -1167,6 +1169,7 @@ body.is-home .aurora{opacity:1}
     if(cloudUnsubscribe){cloudUnsubscribe();cloudUnsubscribe=null}
     if(cloudContactsPoll) clearInterval(cloudContactsPoll);
     if(cloudConfigPoll) clearInterval(cloudConfigPoll);
+    if(cloudLinksPoll) clearInterval(cloudLinksPoll);
     cloudContactsReady=false;cloudContactSnapshot=Object.create(null);
     ui.me=null;
     try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
@@ -2031,13 +2034,13 @@ body.is-home .aurora{opacity:1}
     if(t&&!canEditTpl(t)){e.preventDefault();return;}
     if(t){t.title=title;t.text=text;if(scope==="me")t.owner=ui.me.id;else delete t.owner;}
     else{t={id:uid(),title:title,text:text};if(scope==="me")t.owner=ui.me.id;state.templates.push(t)}
-    save(); render(); toast("Шаблон сохранён");
+    save(); if(!t.owner) publishSharedConfig(); render(); toast("Шаблон сохранён");
   });
   $("tplCancel").onclick=function(){$("dlgTpl").close()};
   $("tplDel").onclick=async function(){
     var t=ui.tplId?findTpl(ui.tplId):null; if(!t||!canEditTpl(t)) return;
     if(await appConfirm("Удалить шаблон «"+t.title+"»?","Удаление шаблона")){
-      state.templates=state.templates.filter(function(x){return x.id!==t.id}); save(); render(); $("dlgTpl").close(); toast("Удалено");
+      state.templates=state.templates.filter(function(x){return x.id!==t.id}); save(); if(!t.owner) publishSharedConfig(); render(); $("dlgTpl").close(); toast("Удалено");
     }
   };
   function openTplUse(id){
