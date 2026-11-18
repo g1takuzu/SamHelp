@@ -53,7 +53,7 @@ function exactPhone(contact: any, target: string) {
   const fields = Array.isArray(contact?.custom_fields_values) ? contact.custom_fields_values : [];
   return fields.some((field: any) => {
     if (field?.field_code !== "PHONE") return false;
-    return (field.values || []).some((item: any) => normalizePhone(item?.value) === target);
+    return (field.values || []).some((item: any) => { const value = normalizePhone(item?.value); return value === target || (value.length === 11 && value.startsWith("7") && value.slice(1) === target) || (target.length === 11 && target.startsWith("7") && target.slice(1) === value); });
   });
 }
 Deno.serve(async (req) => {
