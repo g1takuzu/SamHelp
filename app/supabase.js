@@ -167,7 +167,8 @@
               presence: { key: "" },
               postgres_changes: [
                 { event: "*", schema: "public", table: "private_contacts", filter: "user_id=eq." + user.id },
-                { event: "*", schema: "public", table: "shared_app_config" }
+                { event: "*", schema: "public", table: "shared_app_config" },
+                { event: "*", schema: "public", table: "shared_links" }
               ]
             },
             access_token: session.access_token
