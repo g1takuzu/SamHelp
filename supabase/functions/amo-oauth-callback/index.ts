@@ -61,7 +61,7 @@ Deno.serve(async (req) => {
   const userId = stateRows[0].user_id;
 
   const consume = await fetch(
-    `${supabaseUrl}/rest/v1/amo_oauth_states?state_hash=eq.${stateHash}&consumed=eq.false`,
+    `${supabaseUrl}/rest/v1/amo_oauth_states?state_hash=eq.${stateHash}&consumed=eq.false&expires_at=gt.${encodeURIComponent(new Date().toISOString())}`,
     {
       method: "PATCH",
       headers: { apikey: serviceKey, Authorization: `Bearer ${serviceKey}`, "Content-Type": "application/json", Prefer: "return=representation" },
