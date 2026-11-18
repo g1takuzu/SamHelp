@@ -165,7 +165,8 @@ Deno.serve(async (req) => {
 
     candidates.sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0));
     let lead = candidates[0];
-    if (!lead.status_id || !lead.pipeline_id) lead = await amoGet(origin, "/api/v4/leads/" + lead.id, accessToken);
+    const matchedContactId = lead.amo_contact_id || contacts[0].id;
+    if (!lead.status_id || !lead.pipeline_id) lead = { ...await amoGet(origin, "/api/v4/leads/" + lead.id, accessToken), amo_contact_id: matchedContactId };
     const [pipeline, statuses] = await Promise.all([
       amoGet(origin, "/api/v4/leads/pipelines/" + lead.pipeline_id, accessToken).catch(() => null),
       amoGet(origin, "/api/v4/leads/pipelines/" + lead.pipeline_id + "/statuses", accessToken).catch(() => null),
@@ -178,6 +179,7 @@ Deno.serve(async (req) => {
       lead_id: lead.id, lead_name: lead.name || "",
       pipeline_id: lead.pipeline_id, pipeline_name: pipeline?.name || "",
       status_id: lead.status_id, status_name: status?.name || ("Статус #" + lead.status_id),
+      status_color: status?.color || null,
       lead_updated_at: lead.updated_at || null,
       matching_contacts: contacts.length, matching_deals: candidates.length,
       deal_url: origin + "/leads/detail/" + lead.id
