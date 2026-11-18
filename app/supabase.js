@@ -256,6 +256,9 @@
     if (!currentUserId()) throw new Error("Нет активной учётной записи");
     await request("/rest/v1/private_contacts?contact_id=eq." + encodeURIComponent(contactId), { method: "DELETE" });
   }
+  async function startAmoOAuth() {
+    return request("/functions/v1/amo-oauth-start", { method: "POST", body: {} });
+  }
   async function getAmoConnectionStatus() {
     return request("/functions/v1/amo-connection-status");
   }
@@ -282,7 +285,7 @@
     listPrivateContacts: listPrivateContacts, upsertPrivateContact: upsertPrivateContact,
     upsertPrivateContacts: upsertPrivateContacts, deletePrivateContact: deletePrivateContact,
     getSharedAppConfig: getSharedAppConfig, updateSharedAppConfig: updateSharedAppConfig,
-    getAmoConnectionStatus: getAmoConnectionStatus, getAmoContactStatus: getAmoContactStatus,
+    startAmoOAuth: startAmoOAuth, getAmoConnectionStatus: getAmoConnectionStatus, getAmoContactStatus: getAmoContactStatus,
     subscribeCloud: subscribeCloud
   };
 })();
