@@ -5,6 +5,31 @@ const fs = require("node:fs");
 const APP_URL = path.join(__dirname, "..", "app", "index.html");
 const EXTERNAL_SCHEMES = /^(https?:|mailto:|tel:|tg:|whatsapp:|ms-|calculator:)/i;
 
+// Постоянное хранилище приложения в профиле пользователя Windows.
+const STATE_FILE = () => path.join(app.getPath("userData"), "SamHelp-state.json");
+let stateWriteQueue = Promise.resolve();
+
+ipcMain.handle("samhelp:load-state", async () => {
+  try {
+    return await fs.promises.readFile(STATE_FILE(), "utf8");
+  } catch (error) {
+    if (error.code === "ENOENT") return null;
+    throw error;
+  }
+});
+ipcMain.handle("samhelp:save-state", async (_event, text) => {
+  if (typeof text !== "string" || text.length > 50 * 1024 * 1024) throw new Error("bad state data");
+  stateWriteQueue = stateWriteQueue.then(async () => {
+    const file = STATE_FILE();
+    await fs.promises.mkdir(path.dirname(file), { recursive: true });
+    const temp = file + ".tmp";
+    await fs.promises.writeFile(temp, text, "utf8");
+    await fs.promises.rename(temp, file);
+  });
+  await stateWriteQueue;
+  return true;
+});
+
 // Автокопии: программа кладёт файлы-копии в «Документы\\SamHelp-backups»
 function backupDir() {
   const dir = path.join(app.getPath("documents"), "SamHelp-backups");
