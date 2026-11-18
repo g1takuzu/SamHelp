@@ -87,7 +87,7 @@ Deno.serve(async (req) => {
   const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
   const connectionResponse = await fetch(
     supabaseUrl + "/rest/v1/amo_connections?user_id=eq." + encodeURIComponent(user.id) +
-    "&select=id,account_subdomain,access_token_ciphertext,refresh_token_ciphertext,token_expires_at,client_id_ciphertext,client_secret_ciphertext,webhook_secret_ciphertext,webhook_registered_at&limit=1",
+    "&select=id,account_subdomain,access_token_ciphertext,refresh_token_ciphertext,token_expires_at,client_id_ciphertext,client_secret_ciphertext,webhook_secret_ciphertext,webhook_registered_at,webhook_attempted_at&limit=1",
     { headers }
   );
   const connections = await readJson(connectionResponse);
@@ -143,6 +143,7 @@ Deno.serve(async (req) => {
   }
 
   let webhookEnabled = !!connection.webhook_registered_at;
+  const lastWebhookAttempt = connection.webhook_attempted_at ? Date.parse(connection.webhook_attempted_at) : 0;
   try {
     let webhookSecret = connection.webhook_secret_ciphertext
       ? await decrypt(connection.webhook_secret_ciphertext, encryptionKey)
@@ -159,7 +160,7 @@ Deno.serve(async (req) => {
       });
       if (!stored.ok) throw new Error("Could not store webhook secret");
     }
-    if (!webhookEnabled) {
+    if (!webhookEnabled && (!lastWebhookAttempt || Date.now() - lastWebhookAttempt > 60 * 60 * 1000)) {
       const destination = supabaseUrl + "/functions/v1/amo-webhook?key=" + encodeURIComponent(webhookSecret);
       const registration = await fetch(origin + "/api/v4/webhooks", {
         method: "POST", headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
@@ -168,14 +169,14 @@ Deno.serve(async (req) => {
       if (registration.ok) {
         const saved = await fetch(supabaseUrl + "/rest/v1/amo_connections?id=eq." + encodeURIComponent(connection.id), {
           method: "PATCH", headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({ webhook_registered_at: new Date().toISOString(), last_error: null })
+          body: JSON.stringify({ webhook_registered_at: new Date().toISOString(), webhook_attempted_at: new Date().toISOString(), last_error: null })
         });
         webhookEnabled = saved.ok;
       } else {
         const detail = await readJson(registration);
         await fetch(supabaseUrl + "/rest/v1/amo_connections?id=eq." + encodeURIComponent(connection.id), {
           method: "PATCH", headers: { ...headers, "Content-Type": "application/json" },
-          body: JSON.stringify({ last_error: "Webhook unavailable (administrator permission required): " + String(detail?.title || detail?.detail || registration.status) })
+          body: JSON.stringify({ webhook_attempted_at: new Date().toISOString(), last_error: "Webhook unavailable (administrator permission required): " + String(detail?.title || detail?.detail || registration.status) })
         });
       }
     }
