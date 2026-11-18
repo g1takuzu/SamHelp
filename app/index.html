@@ -1723,14 +1723,6 @@ body.is-home .aurora{opacity:1}
       '<div class="dcard rise"><h3>🚀 Быстрый доступ<small><button class="link" data-act="tab" data-tab="apps">Все →</button></small></h3>'+
         (qa?'<div class="qa">'+qa+'</div>':'<div class="dempty">Добавьте программы во вкладке «Программы»</div>')+'</div>';
 
-    if(isAdmin()&&state.users.length>1){
-      var cnt=state.users.map(function(u){return {u:u,n:state.contacts.filter(function(c){return c.owner===u.id}).length}});
-      var mx=Math.max.apply(null,cnt.map(function(x){return x.n}).concat([1])), total=Math.max(1,state.contacts.length);
-      html+='<div class="dcard rise" style="grid-column:1/-1"><h3>🧑‍💼 По сотрудникам<small>видно только администратору</small></h3>'+
-        cnt.map(function(x){
-          return '<div class="frow static"><div class="fl">'+esc(x.u.name)+'</div><div class="track"><div class="fill" style="width:'+(x.n?Math.max(4,Math.round(x.n/mx*100)):0)+'%;'+(x.n?'':'min-width:0;')+'background:'+colorFor(x.u.name)+'"></div></div><div class="fc">'+x.n+'<small>'+Math.round(x.n/total*100)+'%</small></div></div>';
-        }).join("")+'</div>';
-    }
     html+='</div>';
     $("dash").innerHTML=html;
   }
@@ -2433,9 +2425,7 @@ body.is-home .aurora{opacity:1}
   function renderUsers(){
     $("usersList").innerHTML=state.users.map(function(u){
       var me=ui.me&&u.id===ui.me.id;
-      var n=state.contacts.filter(function(c){return c.owner===u.id}).length;
-      return '<div class="urow"><div class="avatar" style="background:'+colorFor(u.name)+';width:2.5rem;height:2.5rem;font-size:1rem">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+
-        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.login)+' · людей: '+n+'</div></div>'+
+      return '<div class="urow"><div class="avatar" style="background:'+colorFor(u.name)+';width:2.5rem;height:2.5rem;font-size:1rem">'+esc(u.name.charAt(0).toUpperCase())+'</div>'+        '<div class="who"><div class="name">'+esc(u.name)+(me?' (вы)':'')+'</div><div class="host">'+esc(u.login)+'</div></div>'+
         '<select data-act="role" data-id="'+u.id+'"'+(me?' disabled':'')+'><option value="user"'+(u.role==="user"?" selected":"")+'>Сотрудник</option><option value="admin"'+(u.role==="admin"?" selected":"")+'>Админ</option></select>'+
         '<button class="icon" data-act="pw" data-id="'+u.id+'">Пароль</button>'+
         (me?'':'<button class="icon" data-act="del" data-id="'+u.id+'">Удалить</button>')+'</div>';
@@ -2454,9 +2444,7 @@ body.is-home .aurora{opacity:1}
       u.salt=randHex(16); u.hash=hashPw(p,u.salt); save(); toast("Пароль изменён");
     }else if(act==="del"){
       if(u.role==="admin"&&adminCount()<2){toast("Нельзя удалить последнего администратора");return;}
-      var n=state.contacts.filter(function(c){return c.owner===u.id}).length;
-      if(await appConfirm("Удалить «"+u.name+"»?"+(n?" Его люди ("+n+") перейдут к вам.":""),"Удаление пользователя")){
-        state.contacts.forEach(function(c){if(c.owner===u.id)c.owner=ui.me.id});
+      if(await appConfirm("Удалить учётную запись «"+u.name+"»? Личные контакты сотрудника останутся закрытыми для других пользователей.","Удаление пользователя")){
         state.pending.forEach(function(p){if(p.owner===u.id)p.owner=ui.me.id});
         state.links.sheets=state.links.sheets.filter(function(x){return x.owner!==u.id});
         state.links.apps=state.links.apps.filter(function(x){return x.owner!==u.id});
