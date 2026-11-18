@@ -394,6 +394,24 @@ body.is-home .aurora{opacity:1}
 .impinfo{font-size:.85rem;font-weight:700;padding:.6rem .8rem;border-radius:.9rem;background:var(--bg)}
 #impText{min-height:9rem;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
 #tplText,#tplOut{min-height:8rem}
+/* ===== v10: отчёты и план ===== */
+.plan{display:flex;flex-direction:column;gap:.3rem;margin-bottom:.7rem}
+.pl{display:flex;justify-content:space-between;gap:.5rem;font-weight:700;font-size:.85rem}
+.rrow{display:grid;grid-template-columns:minmax(7rem,14rem) 1fr 9.5rem;gap:.8rem;align-items:center;padding:.45rem .5rem;border-radius:.9rem}
+.rrow:hover{background:var(--bg)}
+.rn{font-weight:800;font-size:.9rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rbar{height:.95rem;border-radius:999px;background:var(--bg);overflow:hidden}
+.rseg{display:flex;height:100%;border-radius:999px;overflow:hidden;min-width:.5rem}
+.rseg i{display:block}
+.rc{text-align:right;font-weight:800;font-size:.875rem}
+.rc small{color:var(--muted);font-weight:700;font-size:.72rem;margin-left:.3rem}
+.rleg{display:flex;gap:1rem;flex-wrap:wrap;font-size:.75rem;font-weight:700;color:var(--muted)}
+.rleg i{display:inline-block;width:.7rem;height:.7rem;border-radius:50%;margin-right:.3rem;vertical-align:-1px}
+.best{background:rgba(25,169,116,.12);border:2px solid rgba(25,169,116,.4);border-radius:1rem;padding:.7rem 1rem;font-weight:700}
+@media (max-width:700px){.rrow{grid-template-columns:1fr}.rc{text-align:left}}
+.srow input[type=number]{width:5.5rem;padding:.4rem .6rem;border-radius:.7rem;border:2px solid var(--line);background:var(--panel);outline:none}
+.srow input[type=number]:focus{border-color:var(--accent)}
+#dlgGoals{width:min(36rem,95vw)}
 </style>
 </head>
 <body>
@@ -451,6 +469,7 @@ body.is-home .aurora{opacity:1}
       <button class="tab" data-tab="people">👥 Люди</button>
       <button class="tab" data-tab="board">🗂 Доска</button>
       <button class="tab" data-tab="templates">✉️ Шаблоны</button>
+      <button class="tab" data-tab="reports">📈 Отчёты</button>
       <button class="tab" data-tab="sheets">📊 Таблицы</button>
       <button class="tab" data-tab="apps">🚀 Программы</button>
       <div class="hact">
@@ -515,6 +534,14 @@ body.is-home .aurora{opacity:1}
 
   <section class="view" id="v-templates">
     <div class="grid" id="listTpl"></div>
+  </section>
+
+  <section class="view" id="v-reports">
+    <div class="toolbar">
+      <select class="flt" id="rGroup"></select>
+      <select class="flt" id="rPeriod"><option value="0">Все люди</option><option value="30">Добавлены за 30 дней</option><option value="7">Добавлены за 7 дней</option></select>
+    </div>
+    <div class="dash" id="reportBody"></div>
   </section>
 
   <section class="view" id="v-sheets">
@@ -700,6 +727,23 @@ body.is-home .aurora{opacity:1}
   </div>
 </dialog>
 
+<dialog id="dlgGoals">
+  <form method="dialog" class="dlg" id="formGoals">
+    <h2>Мой план</h2>
+    <div class="hint">Выберите, что считать, за какой период и сколько хотите. Цели видите только вы.</div>
+    <div id="goalRows"></div>
+    <div class="hint" id="gHint"></div>
+    <button class="btn" type="button" id="gAdd">+ Цель</button>
+    <label class="remember"><input type="checkbox" id="gShow" checked> Показывать план на главной</label>
+    <div class="actions">
+      <button class="btn" type="button" id="gReset">Стандартный</button>
+      <div class="spacer"></div>
+      <button class="btn" type="button" id="gCancel">Отмена</button>
+      <button class="btn primary" type="submit">Сохранить</button>
+    </div>
+  </form>
+</dialog>
+
 <dialog id="appMessageDialog">
   <form method="dialog" class="dlg" id="appMessageForm">
     <h2 id="appMessageTitle">Подтверждение</h2>
@@ -757,8 +801,8 @@ body.is-home .aurora{opacity:1}
     ]
   };
 
-  var state={contacts:[],pipelines:null,templates:null,links:null,users:[],settings:null,pending:[],setupCompleted:false};
-  var ui={me:null,tab:"home",pipe:"",status:"",bpipe:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",pr:[],drawerId:null,tplId:null,tplFor:null,dragId:null};
+  var state={contacts:[],pipelines:null,templates:null,links:null,users:[],settings:null,pending:[],stats:{},goals:{},setupCompleted:false};
+  var ui={me:null,tab:"home",pipe:"",status:"",bpipe:"",editId:null,linkKind:"sheets",linkId:null,authMode:"login",pr:[],gr:[],drawerId:null,tplId:null,tplFor:null,dragId:null};
 
   var $=function(id){return document.getElementById(id)};
   function uid(){return "x"+Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
@@ -816,6 +860,8 @@ body.is-home .aurora{opacity:1}
     if(d.links&&Array.isArray(d.links.sheets)&&Array.isArray(d.links.apps)) state.links=d.links;
     if(d.settings) state.settings=d.settings;
     if(Array.isArray(d.pending)) state.pending=d.pending;
+    if(d.stats&&typeof d.stats==='object') state.stats=d.stats;
+    if(d.goals&&typeof d.goals==='object') state.goals=d.goals;
     if(Array.isArray(d.templates)) state.templates=d.templates;
     if(Array.isArray(d.pipelines)&&d.pipelines.length) state.pipelines=d.pipelines;
     normalize();
@@ -1143,6 +1189,131 @@ body.is-home .aurora{opacity:1}
     toast("Открываю… Если окно не появилось, программа не установлена");
   }
 
+  /* ---------- план и статистика ---------- */
+  function dayKey(d){return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())}
+  function bump(key,n){
+    if(!ui.me) return;
+    var u=state.stats[ui.me.id]; if(!u) u=state.stats[ui.me.id]={};
+    var k=dayKey(new Date());
+    if(!u[k]){
+      var cut=new Date(); cut.setDate(cut.getDate()-120); var ck=dayKey(cut);
+      Object.keys(u).forEach(function(x){if(x<ck) delete u[x]});
+      u[k]={};
+    }
+    u[k][key]=(u[k][key]||0)+(n||1);
+  }
+  function sumStats(key,days){
+    var u=(ui.me&&state.stats[ui.me.id])||{}, t=0;
+    for(var i=0;i<days;i++){var d=new Date();d.setDate(d.getDate()-i);var r=u[dayKey(d)];if(r&&r[key])t+=r[key]}
+    return t;
+  }
+  function weekDays(){return (new Date().getDay()+6)%7+1}
+  var METRICS={t:"Касания",a:"Добавлено людей",s:"На оформление",w:"Успешно реализовано"};
+  var METRIC_HINT={t:"открыли чат, написали заметку или отправили шаблон",a:"новые люди: вручную или импортом",s:"переведены на статус с 🔔",w:"переведены на статус «успешно»"};
+  var PERIOD_WORD={day:"сегодня",week:"за неделю",month:"за месяц"};
+  var PERIOD_OPT={day:"в день",week:"в неделю",month:"в месяц"};
+  function periodDays(p){return p==="day"?1:p==="week"?weekDays():new Date().getDate()}
+  function defaultGoals(){return [{id:uid(),metric:"t",period:"day",target:20},{id:uid(),metric:"s",period:"week",target:3},{id:uid(),metric:"w",period:"week",target:1}]}
+  function goalsOf(){
+    var g=state.goals[ui.me.id];
+    if(g&&Array.isArray(g.items)) return {items:g.items,hidden:!!g.hidden};
+    var items=defaultGoals();
+    if(g&&(g.t||g.s!=null||g.w!=null)){items[0].target=g.t||20;items[1].target=g.s==null?3:g.s;items[2].target=g.w==null?1:g.w}
+    return {items:items,hidden:false};
+  }
+  function planRow(label,done,goal){
+    var pct=Math.min(100,Math.round(done/Math.max(1,goal)*100)), full=goal>0&&done>=goal;
+    return '<div class="plan"><div class="pl"><span>'+esc(label)+'</span><b>'+done+' / '+goal+(full?' 🎉':'')+'</b></div><div class="track"><div class="fill" style="width:'+pct+'%;'+(pct?'':'min-width:0;')+'background:'+(full?'#19a974':'var(--accent)')+'"></div></div></div>';
+  }
+  function planCard(){
+    var g=goalsOf(), head='<div class="dcard rise"><h3>🎯 Мой план<small><button class="link" data-act="goals">Настроить</button></small></h3>';
+    if(g.hidden) return head+'<div class="dempty">План выключен. Нажмите «Настроить», чтобы включить.</div></div>';
+    if(!g.items.length) return head+'<div class="dempty">Целей пока нет. Нажмите «Настроить» и добавьте свою.</div></div>';
+    return head+g.items.map(function(it){
+      return planRow((METRICS[it.metric]||it.metric)+" "+(PERIOD_WORD[it.period]||""),sumStats(it.metric,periodDays(it.period)),it.target);
+    }).join("")+'<div class="hint">Неделя считается с понедельника, месяц — с 1 числа. План виден только вам.</div></div>';
+  }
+  function goalRows(){
+    $("goalRows").innerHTML=ui.gr.map(function(it,i){
+      return '<div class="srow" data-i="'+i+'"><select data-f="metric" title="Что считать">'+Object.keys(METRICS).map(function(k){return '<option value="'+k+'"'+(k===it.metric?" selected":"")+'>'+METRICS[k]+'</option>'}).join("")+'</select>'+
+        '<input type="number" data-f="target" min="1" max="9999" value="'+it.target+'" title="Цель">'+
+        '<select data-f="period" title="За какой период">'+Object.keys(PERIOD_OPT).map(function(k){return '<option value="'+k+'"'+(k===it.period?" selected":"")+'>'+PERIOD_OPT[k]+'</option>'}).join("")+'</select>'+
+        '<button type="button" class="mini" data-act="del" title="Убрать цель">✕</button></div>';
+    }).join("")||'<div class="hint">Целей нет — нажмите «+ Цель».</div>';
+    $("gAdd").hidden=ui.gr.length>=8;
+    $("gHint").textContent=ui.gr.length?("«"+METRICS[ui.gr[ui.gr.length-1].metric]+"» — "+METRIC_HINT[ui.gr[ui.gr.length-1].metric]):"";
+  }
+  function openGoals(){
+    var g=goalsOf(); ui.gr=clone(g.items); $("gShow").checked=!g.hidden; goalRows(); $("dlgGoals").showModal();
+  }
+  $("goalRows").addEventListener("click",function(e){
+    var t=e.target.closest("[data-act=del]"), row=e.target.closest(".srow[data-i]"); if(!t||!row) return;
+    ui.gr.splice(+row.getAttribute("data-i"),1); goalRows();
+  });
+  function onGoalField(e){
+    var f=e.target.getAttribute&&e.target.getAttribute("data-f"), row=e.target.closest&&e.target.closest(".srow[data-i]"); if(!f||!row) return;
+    var it=ui.gr[+row.getAttribute("data-i")]; if(!it) return;
+    if(f==="target"){var v=parseInt(e.target.value,10);it.target=isNaN(v)?0:v}
+    else it[f]=e.target.value;
+    if(f==="metric") $("gHint").textContent="«"+METRICS[it.metric]+"» — "+METRIC_HINT[it.metric];
+  }
+  $("goalRows").addEventListener("input",onGoalField);
+  $("goalRows").addEventListener("change",onGoalField);
+  $("gAdd").onclick=function(){ui.gr.push({id:uid(),metric:"t",period:"day",target:10});goalRows()};
+  $("gReset").onclick=function(){ui.gr=defaultGoals();$("gShow").checked=true;goalRows()};
+  $("formGoals").addEventListener("submit",function(e){
+    var bad=ui.gr.some(function(it){return !(it.target>=1)});
+    if(bad){e.preventDefault();toast("Цель должна быть числом от 1");return;}
+    state.goals[ui.me.id]={items:ui.gr.map(function(it){return {id:it.id||uid(),metric:it.metric,period:it.period,target:Math.min(9999,it.target)}}),hidden:!$("gShow").checked};
+    save(); render(); toast("План сохранён");
+  });
+  $("gCancel").onclick=function(){$("dlgGoals").close()};
+
+  /* ---------- отчёты ---------- */
+  function renderReports(){
+    var adm=isAdmin(), g=$("rGroup").value||"source", days=+$("rPeriod").value||0;
+    var opts=[["source","По источникам"],["city","По городам"],["vacancy","По вакансиям"]]; if(adm) opts.push(["owner","По сотрудникам"]);
+    if(!opts.some(function(o){return o[0]===g})) g="source";
+    $("rGroup").innerHTML=opts.map(function(o){return '<option value="'+o[0]+'"'+(o[0]===g?" selected":"")+'>'+o[1]+'</option>'}).join("");
+    var cut=days?Date.now()-days*864e5:0;
+    var ppl=mine().filter(function(c){return !cut||(c.created||c.updated||0)>=cut});
+    var none="Не указан", map={}, order=[];
+    ppl.forEach(function(c){
+      var k=g==="owner"?(c.owner?userName(c.owner):"—"):((g==="city"?c.city:g==="vacancy"?c.vacancy:c.source)||none);
+      if(!map[k]){map[k]={name:k,total:0,won:0,lost:0};order.push(k)}
+      var x=stOf(c), kind=x?x.s.kind:"", m=map[k];
+      m.total++; if(kind==="won") m.won++; else if(kind==="lost") m.lost++;
+    });
+    var rows=order.map(function(k){var m=map[k];m.work=m.total-m.won-m.lost;m.conv=m.total?m.won/m.total:0;return m});
+    rows.sort(function(a,b){
+      if((a.name===none)!==(b.name===none)) return a.name===none?1:-1;
+      return b.conv-a.conv||b.won-a.won||b.total-a.total;
+    });
+    var won=ppl.filter(function(c){var x=stOf(c);return x&&x.s.kind==="won"}).length, lost=ppl.filter(function(c){var x=stOf(c);return x&&x.s.kind==="lost"}).length;
+    $("sub").textContent="Отчёт: людей "+ppl.length;
+    var label={source:"источникам",city:"городам",vacancy:"вакансиям",owner:"сотрудникам"}[g];
+    var html='<div class="stats">'+
+      stat("👥",ppl.length,"Людей в отчёте","","")+
+      stat("✅",won,"Успешно реализовано","","")+
+      stat("📉",lost,"Закрыто и не реализовано","","")+
+      stat("🎯",ppl.length?Math.round(won/ppl.length*100)+"%":"—","Конверсия в успех","","")+'</div>';
+    var best=rows.filter(function(m){return m.name!==none&&m.total>=3&&m.won>0})[0];
+    var max=Math.max.apply(null,rows.map(function(m){return m.total}).concat([1]));
+    var unk=map[none]?map[none].total:0;
+    html+='<div class="dcard rise"><h3>📊 Результат по '+label+'<small>'+rows.length+'</small></h3>'+
+      (best?'<div class="best">🏆 Лучше всех: <b>'+esc(best.name)+'</b> — '+best.won+' из '+best.total+' дошли до успеха ('+Math.round(best.conv*100)+'%)</div>':'')+
+      (rows.length?rows.map(function(m){
+        return '<div class="rrow"><div class="rn" title="'+esc(m.name)+'">'+esc(m.name)+'</div>'+
+          '<div class="rbar"><div class="rseg" style="width:'+Math.max(8,Math.round(m.total/max*100))+'%"><i style="flex:'+m.won+';background:#19a974"></i><i style="flex:'+m.work+';background:#0e8fdd"></i><i style="flex:'+m.lost+';background:#c5c9cf"></i></div></div>'+
+          '<div class="rc"><b>'+m.won+'</b> / '+m.total+'<small>'+Math.round(m.conv*100)+'%</small></div></div>';
+      }).join(""):'<div class="dempty">Пока нет людей для отчёта</div>')+
+      '<div class="rleg"><span><i style="background:#19a974"></i>успешно</span><span><i style="background:#0e8fdd"></i>в работе</span><span><i style="background:#c5c9cf"></i>закрыто</span></div>'+
+      (g!=="owner"&&unk?'<div class="hint">У '+unk+' чел. не заполнено поле — укажите его в «Изменить» или при импорте, и отчёт станет точнее.</div>':'')+'</div>';
+    $("reportBody").innerHTML=html;
+  }
+  $("rGroup").addEventListener("change",renderReports);
+  $("rPeriod").addEventListener("change",renderReports);
+
   /* ---------- статусы (как в amoCRM) ---------- */
   function pipeById(id){return state.pipelines.filter(function(p){return p.id===id})[0]}
   function stOf(c){return look(c.status)}
@@ -1178,7 +1349,7 @@ body.is-home .aurora{opacity:1}
       html+='<div class="sthead">Перенести в воронку</div>';
       others.forEach(function(p){html+='<button type="button" class="stmove" data-p="'+p.id+'">'+esc(p.name)+' →</button>'});
     }
-    m.innerHTML=html; m.setAttribute("data-for",id); m.hidden=false;
+    m.innerHTML=html; m.setAttribute("data-for",id); m.hidden=false; ui.stOpenAt=Date.now();
     var r=btn.getBoundingClientRect(), w=m.offsetWidth, h=m.offsetHeight;
     var left=Math.min(Math.max(8,r.left),window.innerWidth-w-8), top=r.bottom+6;
     if(top+h>window.innerHeight-8) top=Math.max(8,r.top-h-6);
@@ -1193,12 +1364,13 @@ body.is-home .aurora{opacity:1}
   document.addEventListener("mousedown",function(e){
     if(!$("stPop").hidden&&!e.target.closest("#stPop")&&!e.target.closest("[data-act=stmenu]")) closeStMenu();
   });
-  window.addEventListener("scroll",function(e){if(!$("stPop").hidden&&!$("stPop").contains(e.target))closeStMenu()},true);
+  window.addEventListener("scroll",function(e){if(!$("stPop").hidden&&!$("stPop").contains(e.target)&&Date.now()-(ui.stOpenAt||0)>400)closeStMenu()},true);
 
   function changeStatus(c,statusId){
     var o=stOf(c), n=look(statusId); if(!n||c.status===statusId) return;
     var oldId=c.status, moved=!o||o.p.id!==n.p.id;
     c.status=statusId; c.updated=Date.now();
+    if(n.s.kind==="won") bump("w"); else if(n.s.remind) bump("s");
     pushFeed(c,"event","Статус: "+(o?o.s.name:"—")+" → "+(moved?n.p.name+" / ":"")+n.s.name);
     save(); maybeRemind(c,oldId); render(); refreshDrawer(c.id);
   }
@@ -1285,7 +1457,7 @@ body.is-home .aurora{opacity:1}
   }
 
   /* ---------- вкладки ---------- */
-  var ADD_LABEL={home:"+ Добавить человека",people:"+ Добавить человека",board:"+ Добавить человека",templates:"+ Добавить шаблон",sheets:"+ Добавить таблицу",apps:"+ Добавить программу"};
+  var ADD_LABEL={home:"+ Добавить человека",people:"+ Добавить человека",board:"+ Добавить человека",templates:"+ Добавить шаблон",reports:"",sheets:"+ Добавить таблицу",apps:"+ Добавить программу"};
   function setTab(t){
     ui.tab=t;
     if(document.body&&document.body.classList)document.body.classList.toggle("is-home",t==="home");
@@ -1298,7 +1470,7 @@ body.is-home .aurora{opacity:1}
       b.hidden=hide;
     });
     $("btnAdd").textContent=ADD_LABEL[t];
-    $("btnAdd").hidden=(t==="home");
+    $("btnAdd").hidden=(t==="home"||t==="reports");
     render();
   }
   function render(){
@@ -1307,6 +1479,7 @@ body.is-home .aurora{opacity:1}
     else if(ui.tab==="people") renderHome();
     else if(ui.tab==="board") renderBoard();
     else if(ui.tab==="templates") renderTemplates();
+    else if(ui.tab==="reports") renderReports();
     else renderDashboard();
   }
 
@@ -1483,6 +1656,7 @@ body.is-home .aurora{opacity:1}
     html+='<div class="dcols">'+
       '<div class="dcard rise"><h3>⏰ Сегодня<small>'+(today.length||"")+'</small></h3>'+(todayRows||'<div class="dempty">На сегодня напоминаний нет. Поставить можно в карточке человека.</div>')+
         (today.length>6?'<small class="hint">И ещё: '+(today.length-6)+'</small>':'')+'</div>'+
+      planCard()+
       funnels+
       '<div class="dcard rise"><h3>⏳ Требует внимания<small>'+(stale.length||"")+'</small></h3>'+(att||'<div class="dempty">Все на связи — никого не пропустили 🎉</div>')+
         (stale.length>5?'<button class="link" data-act="people">Показать всех ('+stale.length+') →</button>':'')+'</div>'+
@@ -1506,6 +1680,7 @@ body.is-home .aurora{opacity:1}
     var t=e.target.closest("[data-act]"); if(!t) return;
     var act=t.getAttribute("data-act"), id=t.getAttribute("data-id");
     if(act==="add") return openEdit(null);
+    if(act==="goals") return openGoals();
     if(act==="people"){ui.pipe="";ui.status="";return setTab("people");}
     if(act==="tab") return setTab(t.getAttribute("data-tab"));
     if(act==="stage"){ui.pipe=t.getAttribute("data-p")||"";ui.status=t.getAttribute("data-st")||"";return setTab("people");}
@@ -1515,7 +1690,7 @@ body.is-home .aurora{opacity:1}
     if(act==="chat"){
       var k=mainChannel(c), l=k&&linkFor(c,k);
       if(!l) return toast("Откройте карточку и добавьте ссылку на профиль");
-      c.updated=Date.now(); save(); window.open(l,"_blank","noopener"); render();
+      c.updated=Date.now(); bump("t"); save(); window.open(l,"_blank","noopener"); render();
     }
   });
 
@@ -1536,7 +1711,7 @@ body.is-home .aurora{opacity:1}
         else toast("Добавьте ссылку на профиль в «Изменить»");
         return true;
       }
-      c.updated=Date.now(); save();
+      c.updated=Date.now(); bump("t"); save();
       window.open(l,"_blank","noopener");
       return true;
     }
@@ -1584,7 +1759,7 @@ body.is-home .aurora{opacity:1}
   }
   function addNote(c){
     var v=$("dNote").value.trim(); if(!v) return toast("Напишите текст заметки");
-    pushFeed(c,"note",v); c.updated=Date.now(); save(); render(); renderDrawer();
+    pushFeed(c,"note",v); c.updated=Date.now(); bump("t"); save(); render(); renderDrawer();
     toast("Заметка добавлена");
   }
   $("drawer").addEventListener("click",function(e){
@@ -1740,7 +1915,7 @@ body.is-home .aurora{opacity:1}
   });
   function tplSent(how){
     var c=getContact(ui.tplFor), t=findTpl($("tplPick").value); if(!c) return;
-    pushFeed(c,"event","Сообщение по шаблону «"+(t?t.title:"")+"» ("+how+")"); c.updated=Date.now(); save(); render(); refreshDrawer(c.id);
+    pushFeed(c,"event","Сообщение по шаблону «"+(t?t.title:"")+"» ("+how+")"); c.updated=Date.now(); bump("t"); save(); render(); refreshDrawer(c.id);
   }
   $("tplCopy").onclick=function(){copyText($("tplOut").value,"Текст скопирован — вставьте его в чат");tplSent("скопировано")};
   $("tplWa").onclick=function(){
@@ -1971,12 +2146,13 @@ body.is-home .aurora{opacity:1}
       Object.keys(data).forEach(function(k){c[k]=data[k]});
       if(newStatus!==oldId){
         var o=look(oldId), n=look(newStatus); c.status=newStatus;
+        if(n&&n.s.kind==="won") bump("w"); else if(n&&n.s.remind) bump("s");
         pushFeed(c,"event","Статус: "+(o?o.s.name:"—")+" → "+(n?n.s.name:"—"));
       }
     }else{
       data.id="c"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
       data.created=Date.now(); data.owner=ui.me.id; data.status=newStatus; data.feed=[];
-      state.contacts.push(data); c=data;
+      state.contacts.push(data); c=data; bump("a");
       if(note) pushFeed(c,"note",note);
     }
     save(); maybeRemind(c,oldId); render(); refreshDrawer(c.id); toast("Сохранено");
@@ -2187,7 +2363,7 @@ body.is-home .aurora{opacity:1}
         status:st,source:$("impSource").value.trim(),city:$("impCity").value.trim(),vacancy:$("impVac").value.trim(),tags:tags.slice(),
         feed:[{id:uid(),ts:now,by:ui.me.id,type:"event",text:"Добавлен импортом списка"}],created:now,updated:now,owner:ui.me.id});
     });
-    save(); render(); toast("Добавлено: "+fresh.length+(r.rows.length>fresh.length?", пропущено дублей: "+(r.rows.length-fresh.length):""));
+    bump("a",fresh.length); save(); render(); toast("Добавлено: "+fresh.length+(r.rows.length>fresh.length?", пропущено дублей: "+(r.rows.length-fresh.length):""));
   });
 
   /* ---------- пользователи (админ) ---------- */
