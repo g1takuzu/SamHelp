@@ -117,6 +117,42 @@ revoke all on function public.update_shared_app_config(jsonb) from public, anon;
 grant execute on function public.get_shared_app_config() to authenticated;
 grant execute on function public.update_shared_app_config(jsonb) to authenticated;
 
+-- Admins and explicitly assigned editors may maintain company-wide links.
+drop policy if exists "Editors can insert shared links" on public.shared_links;
+create policy "Editors can insert shared links"
+  on public.shared_links for insert to authenticated
+  with check (
+    created_by = (select auth.uid())
+    and updated_by = (select auth.uid())
+    and (
+      exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+      or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid()))
+    )
+  );
+
+drop policy if exists "Editors can update shared links" on public.shared_links;
+create policy "Editors can update shared links"
+  on public.shared_links for update to authenticated
+  using (
+    exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+    or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid()))
+  )
+  with check (
+    updated_by = (select auth.uid())
+    and (
+      exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+      or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid()))
+    )
+  );
+
+drop policy if exists "Editors can delete shared links" on public.shared_links;
+create policy "Editors can delete shared links"
+  on public.shared_links for delete to authenticated
+  using (
+    exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+    or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid()))
+  );
+
 -- Enable database change notifications when Supabase Realtime publication exists.
 do $$
 begin
