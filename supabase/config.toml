@@ -1,0 +1,5 @@
+[functions.amo-oauth-start]
+verify_jwt = true
+
+[functions.amo-oauth-callback]
+verify_jwt = false
