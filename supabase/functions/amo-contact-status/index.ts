@@ -22,6 +22,7 @@ async function decrypt(value: string, keyText: string) {
   const plain = await crypto.subtle.decrypt({ name: "AES-GCM", iv }, key, cipher);
   return new TextDecoder().decode(plain);
 }
+async function sha256(value: string) { return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value))), b => b.toString(16).padStart(2, "0")).join(""); }
 async function encrypt(value: string, keyText: string) {
   const raw = fromB64(keyText);
   if (raw.length !== 32) throw new Error("Invalid encryption key");
@@ -86,7 +87,7 @@ Deno.serve(async (req) => {
   const headers = { apikey: serviceKey, Authorization: "Bearer " + serviceKey };
   const connectionResponse = await fetch(
     supabaseUrl + "/rest/v1/amo_connections?user_id=eq." + encodeURIComponent(user.id) +
-    "&select=id,account_subdomain,access_token_ciphertext,refresh_token_ciphertext,token_expires_at,client_id_ciphertext,client_secret_ciphertext&limit=1",
+    "&select=id,account_subdomain,access_token_ciphertext,refresh_token_ciphertext,token_expires_at,client_id_ciphertext,client_secret_ciphertext,webhook_secret_ciphertext,webhook_registered_at&limit=1",
     { headers }
   );
   const connections = await readJson(connectionResponse);
@@ -141,13 +142,54 @@ Deno.serve(async (req) => {
     if (!updated.ok) return json({ error: "Could not store refreshed amoCRM tokens" }, 500);
   }
 
+  let webhookEnabled = !!connection.webhook_registered_at;
+  try {
+    let webhookSecret = connection.webhook_secret_ciphertext
+      ? await decrypt(connection.webhook_secret_ciphertext, encryptionKey)
+      : "";
+    if (!webhookSecret) {
+      const random = crypto.getRandomValues(new Uint8Array(32));
+      webhookSecret = btoa(String.fromCharCode(...random)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+      const [secretHash, secretCipher] = await Promise.all([
+        sha256(webhookSecret), encrypt(webhookSecret, encryptionKey)
+      ]);
+      const stored = await fetch(supabaseUrl + "/rest/v1/amo_connections?id=eq." + encodeURIComponent(connection.id), {
+        method: "PATCH", headers: { ...headers, "Content-Type": "application/json" },
+        body: JSON.stringify({ webhook_secret_hash: secretHash, webhook_secret_ciphertext: secretCipher })
+      });
+      if (!stored.ok) throw new Error("Could not store webhook secret");
+    }
+    if (!webhookEnabled) {
+      const destination = supabaseUrl + "/functions/v1/amo-webhook?key=" + encodeURIComponent(webhookSecret);
+      const registration = await fetch(origin + "/api/v4/webhooks", {
+        method: "POST", headers: { Authorization: "Bearer " + accessToken, "Content-Type": "application/json" },
+        body: JSON.stringify({ destination, settings: ["status_lead"] })
+      });
+      if (registration.ok) {
+        const saved = await fetch(supabaseUrl + "/rest/v1/amo_connections?id=eq." + encodeURIComponent(connection.id), {
+          method: "PATCH", headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ webhook_registered_at: new Date().toISOString(), last_error: null })
+        });
+        webhookEnabled = saved.ok;
+      } else {
+        const detail = await readJson(registration);
+        await fetch(supabaseUrl + "/rest/v1/amo_connections?id=eq." + encodeURIComponent(connection.id), {
+          method: "PATCH", headers: { ...headers, "Content-Type": "application/json" },
+          body: JSON.stringify({ last_error: "Webhook unavailable (administrator permission required): " + String(detail?.title || detail?.detail || registration.status) })
+        });
+      }
+    }
+  } catch (webhookError) {
+    console.error("amoCRM webhook registration failed", webhookError);
+  }
+
   try {
     const search = await amoGet(origin, "/api/v4/contacts?query=" + encodeURIComponent(phone) + "&with=leads&limit=50", accessToken);
     const contacts = (search?._embedded?.contacts || []).filter((contact: any) => exactPhone(contact, phone));
     if (!contacts.length) {
       await fetch(supabaseUrl + "/rest/v1/amo_contact_links?user_id=eq." + encodeURIComponent(user.id) +
         "&samhelp_contact_id=eq." + encodeURIComponent(samhelpContactId), { method: "DELETE", headers });
-      return json({ connected: true, match: "not_found", phone });
+      return json({ connected: true, match: "not_found", phone, webhook_enabled: webhookEnabled });
     }
 
     const candidates: any[] = [];
@@ -160,7 +202,7 @@ Deno.serve(async (req) => {
       for (const lead of linked) candidates.push({ ...lead, amo_contact_id: contact.id });
     }
     if (!candidates.length) {
-      return json({ connected: true, match: "contact_without_deal", contact_id: contacts[0].id, contact_name: contacts[0].name });
+      return json({ connected: true, match: "contact_without_deal", contact_id: contacts[0].id, contact_name: contacts[0].name, webhook_enabled: webhookEnabled });
     }
 
     candidates.sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0));
@@ -181,7 +223,7 @@ Deno.serve(async (req) => {
       status_id: lead.status_id, status_name: status?.name || ("Статус #" + lead.status_id),
       status_color: status?.color || null,
       lead_updated_at: lead.updated_at || null,
-      matching_contacts: contacts.length, matching_deals: candidates.length,
+      matching_contacts: contacts.length, matching_deals: candidates.length, webhook_enabled: webhookEnabled,
       deal_url: origin + "/leads/detail/" + lead.id
     };
 
