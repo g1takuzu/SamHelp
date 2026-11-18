@@ -889,6 +889,37 @@ body.is-home .aurora{opacity:1}
         .catch(function(ex){console.error("Private contacts cloud save failed",ex);toast("Не удалось синхронизировать контакты: "+(ex.message||"ошибка"));});
     },700);
   }
+  var sharedConfigSnapshot="";
+  function sharedConfigPayload(){
+    return {pipelines:state.pipelines,settings:{remindText:state.settings.remindText,allowReg:!!state.settings.allowReg}};
+  }
+  async function pullSharedConfig(){
+    if(!ui.me||!ui.me.cloud||!window.SamHelpCloud) return;
+    try{
+      var cfg=await window.SamHelpCloud.getSharedAppConfig();
+      if(!cfg||!Object.keys(cfg).length) return;
+      var snap=JSON.stringify(cfg);
+      if(snap===sharedConfigSnapshot) return;
+      sharedConfigSnapshot=snap;
+      if(Array.isArray(cfg.pipelines)&&cfg.pipelines.length) state.pipelines=cfg.pipelines;
+      if(cfg.settings&&typeof cfg.settings==="object"){
+        if(typeof cfg.settings.remindText==="string") state.settings.remindText=cfg.settings.remindText;
+        if(typeof cfg.settings.allowReg==="boolean") state.settings.allowReg=cfg.settings.allowReg;
+      }
+      normalize(); save(); render();
+    }catch(ex){console.error("Shared config refresh failed",ex);}
+  }
+  function publishSharedConfig(){
+    if(!ui.me||!ui.me.cloud||!isAdmin()||!window.SamHelpCloud) return;
+    var cfg=sharedConfigPayload();
+    window.SamHelpCloud.updateSharedAppConfig(cfg).then(function(){
+      sharedConfigSnapshot=JSON.stringify(cfg);
+      toast("Общие настройки опубликованы для сотрудников");
+    }).catch(function(ex){
+      console.error("Shared config publish failed",ex);
+      toast("Не удалось сохранить общие настройки: "+(ex.message||"ошибка"));
+    });
+  }
   async function pullCloudContacts(){
     if(!ui.me||!ui.me.cloud||!window.SamHelpCloud||cloudPullBusy) return;
     cloudPullBusy=true;
@@ -2326,7 +2357,7 @@ body.is-home .aurora{opacity:1}
     state.settings.allowReg=$("sReg").checked;
     if(ui.pipe&&!pipeById(ui.pipe)){ui.pipe="";ui.status=""}
     if(ui.status&&!look(ui.status)) ui.status="";
-    save(); renderAlerts(); render(); refreshDrawer(ui.drawerId); toast("Настройки сохранены");
+    save(); publishSharedConfig(); renderAlerts(); render(); refreshDrawer(ui.drawerId); toast("Настройки сохранены");
   });
 
   /* ---------- импорт списка (вставка из Excel) ---------- */
@@ -2592,8 +2623,10 @@ body.is-home .aurora{opacity:1}
         // Локальный общий файл не используется как источник контактов после входа.
         state.contacts=await cloud.listPrivateContacts();
         cloudContactsReady=true;
+        await pullSharedConfig();
         save();enterApp();
         setInterval(pullCloudContacts,5000);
+        setInterval(pullSharedConfig,5000);
         return;
       }
     }catch(authError){console.error("Supabase session restore failed",authError);}
