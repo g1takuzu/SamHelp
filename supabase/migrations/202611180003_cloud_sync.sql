@@ -74,7 +74,8 @@ create policy "Editors insert shared workspace"
 on public.shared_workspace for insert to authenticated
 with check (
   updated_by = (select auth.uid())
-  and exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+  and (exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+   or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid())))
 );
 
 drop policy if exists "Editors update shared workspace" on public.shared_workspace;
@@ -83,7 +84,8 @@ on public.shared_workspace for update to authenticated
 using (exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid())))
 with check (
   updated_by = (select auth.uid())
-  and exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+  and (exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+       or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid())))
 );
 
 create or replace function public.set_shared_workspace_updated_at()
