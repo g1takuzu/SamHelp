@@ -247,12 +247,71 @@
     };
   }
 
+  // Private contacts: RLS is the security boundary; the owner is always taken from
+  // the authenticated session, never from a contact object supplied by the UI.
+  function currentUserId() {
+    return session && session.user && session.user.id || null;
+  }
+  async function listPrivateContacts() {
+    var userId = currentUserId();
+    if (!userId) throw new Error("Для синхронизации контактов нужно войти в аккаунт");
+    var rows = await request("/rest/v1/private_contacts?select=contact_id,data,updated_at&order=updated_at.asc");
+    return (rows || []).map(function (row) {
+      var item = row.data && typeof row.data === "object" ? row.data : {};
+      item.id = row.contact_id;
+      item.owner = userId;
+      return item;
+    });
+  }
+  async function upsertPrivateContact(contact) {
+    var userId = currentUserId();
+    if (!userId) throw new Error("Нет активной учётной записи");
+    if (!contact || !contact.id) throw new Error("У контакта отсутствует ID");
+    var data = JSON.parse(JSON.stringify(contact));
+    data.owner = userId;
+    var rows = await request("/rest/v1/private_contacts?on_conflict=user_id,contact_id", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+      body: { user_id: userId, contact_id: String(contact.id), data: data }
+    });
+    return rows;
+  }
+  async function upsertPrivateContacts(contacts) {
+    var userId = currentUserId();
+    if (!userId) throw new Error("Нет активной учётной записи");
+    var rows = (contacts || []).filter(function (c) { return c && c.id; }).map(function (c) {
+      var data = JSON.parse(JSON.stringify(c)); data.owner = userId;
+      return { user_id: userId, contact_id: String(c.id), data: data };
+    });
+    if (!rows.length) return;
+    await request("/rest/v1/private_contacts?on_conflict=user_id,contact_id", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+      body: rows
+    });
+  }
+  async function deletePrivateContact(contactId) {
+    if (!currentUserId()) throw new Error("Нет активной учётной записи");
+    await request("/rest/v1/private_contacts?contact_id=eq." + encodeURIComponent(contactId), { method: "DELETE" });
+  }
+  async function getSharedAppConfig() {
+    return request("/rest/v1/rpc/get_shared_app_config", { method: "POST", body: {} });
+  }
+  async function updateSharedAppConfig(config) {
+    return request("/rest/v1/rpc/update_shared_app_config", {
+      method: "POST", body: { new_config: config }
+    });
+  }
+
   window.SamHelpCloud = {
     configured: true, currentSession: currentSession, getUser: getUser,
     signUp: signUp, signIn: signIn, signOut: signOut, refresh: refresh, roles: roles,
     listUsers: listUsers, setUserRole: setUserRole,
     getSiteCustomizations: getSiteCustomizations, updateSiteCustomizations: updateSiteCustomizations,
     listShared: listShared, addShared: addShared, updateShared: updateShared, deleteShared: deleteShared,
+    listPrivateContacts: listPrivateContacts, upsertPrivateContact: upsertPrivateContact,
+    upsertPrivateContacts: upsertPrivateContacts, deletePrivateContact: deletePrivateContact,
+    getSharedAppConfig: getSharedAppConfig, updateSharedAppConfig: updateSharedAppConfig,
     listPrivateContacts: listPrivateContacts, upsertPrivateContacts: upsertPrivateContacts,
     deletePrivateContact: deletePrivateContact, getSharedWorkspace: getSharedWorkspace,
     saveSharedWorkspace: saveSharedWorkspace, subscribeCloud: subscribeCloud
