@@ -1527,7 +1527,7 @@ body.is-home .aurora{opacity:1}
   function isFinal(s){return s.kind==="won"||s.kind==="lost"}
   function stBtn(c){
     if(c.amoMatch==="found"){
-      var color=c.amoStatusColor||"#d5d8db";
+      var color=/^#[0-9a-f]{6}$/i.test(c.amoStatusColor||"")?c.amoStatusColor:"#d5d8db";
       return '<span class="stbtn" style="background:'+esc(color)+';color:#20212a" title="Статус получен из amoCRM">'+esc(c.amoStatus||"Статус amoCRM")+'</span>';
     }
     if(c.amoMatch==="not_found") return '<span class="stbtn" title="Контакт с таким номером не найден в amoCRM">Не найден в amoCRM</span>';
@@ -1937,7 +1937,7 @@ body.is-home .aurora{opacity:1}
       '<div class="who"><div class="dr-name">'+esc(name)+'</div><div class="phone" data-act="copy" title="Скопировать номер">'+esc(pretty(c.phone)||"без номера")+'</div></div>'+
       '<button class="icon" data-act="edit">✏️ Изменить</button><button class="icon" data-act="close" title="Закрыть">✕</button></div>';
     h+='<div class="dr-body">';
-    h+='<div class="dr-sec"><div class="dr-lbl">Статус'+(x?' · воронка «'+esc(x.p.name)+'»':'')+'</div>'+stBtn(c)+tagsHtml(c)+'</div>';
+    h+='<div class="dr-sec"><div class="dr-lbl">Статус из amoCRM'+(c.amoPipeline?' · воронка «'+esc(c.amoPipeline)+'»':'')+'</div>'+stBtn(c)+'<button class="btn" data-act="amoRefresh">Обновить из amoCRM</button>'+tagsHtml(c)+'</div>';
     h+='<div class="dr-sec"><div class="dr-lbl">Связаться</div><div class="chat">'+contactButtons(c)+'<button class="go pink sm" data-act="tpl">✉️ Шаблон сообщения</button></div></div>';
     h+='<div class="dr-sec"><div class="dr-lbl">⏰ Когда связаться</div>'+
       '<div class="remrow"><input type="datetime-local" id="dRem" value="'+(rem?toLocalInput(c.remindAt):"")+'"><button class="btn" data-act="rset">Поставить</button></div>'+
@@ -1968,6 +1968,7 @@ body.is-home .aurora{opacity:1}
     if(!c) return;
     if(act==="edit") return openEdit(c.id);
     if(act==="stmenu") return openStMenu(t,c.id);
+    if(act==="amoRefresh"){delete c.amoStatusCheckedAt;return refreshAmoStatuses(true)}
     if(act==="tpl") return openTplUse(c.id);
     if(handleContactAct(act,c,t)) return;
     if(act==="rset"){
