@@ -584,10 +584,10 @@ body.is-home .aurora{opacity:1}
     </div>
     <div class="row2">
       <div class="field"><label>Главная соцсеть (откроется большой кнопкой)</label><select id="fPrimary"></select></div>
-      <div class="field"><label>Воронка</label><select id="fPipe"></select></div>
+      <div class="field"><label>Воронка (из amoCRM)</label><select id="fPipe" disabled></select></div>
     </div>
     <div class="row2">
-      <div class="field"><label>Статус</label><select id="fStage"></select></div>
+      <div class="field"><label>Статус (только из amoCRM)</label><select id="fStage" disabled></select></div>
       <div class="field"><label>Источник</label><input id="fSource" list="dlSource" placeholder="Откуда человек: Авито, сайт, знакомые…"></div>
     </div>
     <div class="row2">
@@ -1006,6 +1006,52 @@ body.is-home .aurora{opacity:1}
     }catch(ex){console.error("Private contacts cloud refresh failed",ex);}
     finally{cloudApplying=false;cloudPullBusy=false;}
   }
+  var amoStatusBusy=false, amoStatusPoll=null, amoConnectionCache=null, amoConnectionCheckedAt=0;
+  async function refreshAmoStatuses(force){
+    if(!ui.me||!ui.me.cloud||!window.SamHelpCloud||amoStatusBusy) return;
+    amoStatusBusy=true;
+    try{
+      if(!amoConnectionCache||Date.now()-amoConnectionCheckedAt>60000){
+        amoConnectionCache=await window.SamHelpCloud.getAmoConnectionStatus();
+        amoConnectionCheckedAt=Date.now();
+      }
+      if(!amoConnectionCache||!amoConnectionCache.connected){
+        state.contacts.forEach(function(contact){contact.amoMatch="not_connected";});
+        render(); if(ui.drawerId) refreshDrawer(ui.drawerId);
+        return;
+      }
+      var list=state.contacts.filter(function(contact){
+        return !!digits(contact.phone) && (force||!contact.amoStatusCheckedAt||Date.now()-Number(contact.amoStatusCheckedAt)>5*60*1000);
+      });
+      for(var i=0;i<list.length;i++){
+        var contact=list[i];
+        try{
+          var result=await window.SamHelpCloud.getAmoContactStatus(contact.phone,contact.id);
+          contact.amoMatch=result.match|| (result.error?"error":"not_found");
+          contact.amoStatus=result.status_name||"";
+          contact.amoPipeline=result.pipeline_name||"";
+          contact.amoLeadId=result.lead_id||"";
+          contact.amoContactId=result.contact_id||"";
+          contact.amoStatusColor=result.status_color||"";
+          contact.amoStatusError=result.error||"";
+          contact.amoStatusCheckedAt=Date.now();
+          if(result.match==="found"){
+            contact.deal=result.deal_url||contact.deal||"";
+            var target=String(result.status_name||"").trim().toLowerCase(), mapped=null;
+            state.pipelines.forEach(function(p){p.statuses.forEach(function(s){if(String(s.name||"").trim().toLowerCase()===target)mapped=s})});
+            if(mapped) contact.status=mapped.id;
+          }
+          save(); render(); refreshDrawer(contact.id);
+        }catch(ex){
+          contact.amoMatch="error";contact.amoStatusError=ex.message||"Ошибка запроса";contact.amoStatusCheckedAt=Date.now();
+          save();
+        }
+        if(i<list.length-1) await new Promise(function(resolve){setTimeout(resolve,300)});
+      }
+    }catch(ex){
+      console.error("amoCRM status refresh failed",ex);
+    }finally{amoStatusBusy=false;}
+  }
   function startCloudListeners(){
     if(cloudUnsubscribe){cloudUnsubscribe();cloudUnsubscribe=null}
     if(window.SamHelpCloud&&window.SamHelpCloud.subscribeCloud){
@@ -1017,6 +1063,9 @@ body.is-home .aurora{opacity:1}
     cloudContactsPoll=setInterval(pullCloudContacts,30000);
     cloudConfigPoll=setInterval(pullSharedConfig,30000);
     cloudLinksPoll=setInterval(pullSharedLinks,30000);
+    if(amoStatusPoll) clearInterval(amoStatusPoll);
+    amoStatusPoll=setInterval(function(){refreshAmoStatuses(false)},5*60*1000);
+    setTimeout(function(){refreshAmoStatuses(false)},1200);
   }
   function save(){
     var raw=JSON.stringify(state);
@@ -1170,6 +1219,7 @@ body.is-home .aurora{opacity:1}
     if(cloudContactsPoll) clearInterval(cloudContactsPoll);
     if(cloudConfigPoll) clearInterval(cloudConfigPoll);
     if(cloudLinksPoll) clearInterval(cloudLinksPoll);
+    if(amoStatusPoll) clearInterval(amoStatusPoll);
     cloudContactsReady=false;cloudContactSnapshot=Object.create(null);
     ui.me=null;
     try{localStorage.removeItem(SKEY);sessionStorage.removeItem(SKEY)}catch(e){}
@@ -1476,8 +1526,15 @@ body.is-home .aurora{opacity:1}
   function stStyle(s){return "background:"+s.color+";color:"+inkFor(s.color)}
   function isFinal(s){return s.kind==="won"||s.kind==="lost"}
   function stBtn(c){
-    var x=stOf(c); if(!x) return "";
-    return '<button class="stbtn" style="'+stStyle(x.s)+'" data-act="stmenu" data-id="'+c.id+'" title="Сменить статус">'+esc(x.s.name)+'</button>';
+    if(c.amoMatch==="found"){
+      var color=c.amoStatusColor||"#d5d8db";
+      return '<span class="stbtn" style="background:'+esc(color)+';color:#20212a" title="Статус получен из amoCRM">'+esc(c.amoStatus||"Статус amoCRM")+'</span>';
+    }
+    if(c.amoMatch==="not_found") return '<span class="stbtn" title="Контакт с таким номером не найден в amoCRM">Не найден в amoCRM</span>';
+    if(c.amoMatch==="contact_without_deal") return '<span class="stbtn">В amoCRM нет сделки</span>';
+    if(c.amoMatch==="not_connected") return '<span class="stbtn">amoCRM не подключена</span>';
+    if(c.amoMatch==="error") return '<span class="stbtn" title="'+esc(c.amoStatusError||"Ошибка синхронизации")+'">Ошибка amoCRM</span>';
+    return '<span class="stbtn">Статус ещё не загружен</span>';
   }
   function pill(s){return '<span class="pill" style="'+stStyle(s)+'">'+esc(s.name)+'</span>'}
   function pushFeed(c,type,text){
@@ -1491,6 +1548,8 @@ body.is-home .aurora{opacity:1}
   function closeStMenu(){var m=$("stPop");m.hidden=true;m.innerHTML=""}
   function openStMenu(btn,id){
     var c=getContact(id); if(!c) return;
+    toast("Статус берётся из amoCRM и здесь не редактируется");
+    return;
     var x=stOf(c), m=$("stPop"), html='<div class="sthead">Воронка: '+esc(x?x.p.name:"—")+'</div>';
     if(x) x.p.statuses.forEach(function(s){
       html+='<button type="button" class="stitem" style="'+stStyle(s)+'" data-s="'+s.id+'">'+esc(s.name)+(s.id===c.status?'<i>✓</i>':'')+'</button>';
@@ -1518,12 +1577,9 @@ body.is-home .aurora{opacity:1}
   window.addEventListener("scroll",function(e){if(!$("stPop").hidden&&!$("stPop").contains(e.target)&&Date.now()-(ui.stOpenAt||0)>400)closeStMenu()},true);
 
   function changeStatus(c,statusId){
-    var o=stOf(c), n=look(statusId); if(!n||c.status===statusId) return;
-    var oldId=c.status, moved=!o||o.p.id!==n.p.id;
-    c.status=statusId; c.updated=Date.now();
-    if(n.s.kind==="won") bump("w"); else if(n.s.remind) bump("s");
-    pushFeed(c,"event","Статус: "+(o?o.s.name:"—")+" → "+(moved?n.p.name+" / ":"")+n.s.name);
-    save(); maybeRemind(c,oldId); render(); refreshDrawer(c.id);
+    // amoCRM is the single source of truth for contact statuses.
+    toast("Статус обновляется только из amoCRM");
+    return;
   }
 
   /* ---------- напоминания ---------- */
@@ -1864,7 +1920,7 @@ body.is-home .aurora{opacity:1}
   /* ---------- карточка человека (панель справа) ---------- */
   function openDrawer(id){
     if(!getContact(id)) return;
-    ui.drawerId=id; $("drawer").classList.add("open"); $("dscrim").hidden=false; renderDrawer();
+    ui.drawerId=id; $("drawer").classList.add("open"); $("dscrim").hidden=false; renderDrawer(); refreshAmoStatuses(false);
   }
   function closeDrawer(){
     ui.drawerId=null; $("drawer").classList.remove("open"); $("dscrim").hidden=true;
@@ -2269,6 +2325,7 @@ body.is-home .aurora{opacity:1}
   function getContact(id){return mine().filter(function(x){return x.id===id})[0]}
   function openEdit(id){
     ui.editId=id||null;
+    $("fPipe").disabled=true; $("fStage").disabled=true;
     var c=id?getContact(id):null;
     $("dTitle").textContent=c?"Изменить контакт":"Новый контакт";
     $("bDel").hidden=!c;
