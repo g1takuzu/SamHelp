@@ -71,7 +71,9 @@ Deno.serve(async (req) => {
       client_id_ciphertext: idCipher, client_secret_ciphertext: secretCipher,
       access_token_ciphertext: accessCipher, refresh_token_ciphertext: refreshCipher,
       token_expires_at: new Date(Date.now() + Number(tokens.expires_in || 86400) * 1000).toISOString(),
-      connected_at: new Date().toISOString(), last_error: null
+      connected_at: new Date().toISOString(), last_error: null,
+      webhook_secret_hash: null, webhook_secret_ciphertext: null,
+      webhook_registered_at: null, webhook_attempted_at: null
     })
   });
   if (!saved.ok) return html("Не удалось сохранить подключение", "Не удалось безопасно сохранить подключение. Обратитесь к администратору SamHelp.", false);
