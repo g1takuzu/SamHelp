@@ -67,8 +67,9 @@ create policy "Authenticated users read shared app config"
 drop policy if exists "Editors update shared app config" on public.shared_app_config;
 create policy "Editors update shared app config"
   on public.shared_app_config for update to authenticated
-  using (exists (
-    select 1 from public.shared_editors e where e.user_id = (select auth.uid())
+  using ((
+    exists (select 1 from public.shared_editors e where e.user_id = (select auth.uid()))
+    or exists (select 1 from public.shared_admins a where a.user_id = (select auth.uid()))
   ))
   with check (exists (
     select 1 from public.shared_editors e where e.user_id = (select auth.uid())
@@ -95,6 +96,8 @@ as $$
 begin
   if not exists (
     select 1 from public.shared_editors e where e.user_id = auth.uid()
+  ) and not exists (
+    select 1 from public.shared_admins a where a.user_id = auth.uid()
   ) then
     raise exception 'Недостаточно прав: требуется роль редактора общих данных';
   end if;
