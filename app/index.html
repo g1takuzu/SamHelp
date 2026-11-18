@@ -2625,8 +2625,13 @@ body.is-home .aurora{opacity:1}
         cloudContactsReady=true;
         await pullSharedConfig();
         save();enterApp();
-        setInterval(pullCloudContacts,5000);
-        setInterval(pullSharedConfig,5000);
+        // Supabase Realtime уведомляет об изменениях; периодическая проверка остаётся резервом.
+        if(cloud.subscribeCloud) cloud.subscribeCloud(function(){
+          pullCloudContacts();
+          pullSharedConfig();
+        });
+        setInterval(pullCloudContacts,30000);
+        setInterval(pullSharedConfig,30000);
         return;
       }
     }catch(authError){console.error("Supabase session restore failed",authError);}
