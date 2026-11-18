@@ -55,6 +55,5 @@ Deno.serve(async (req) => {
   const authorize = new URL("https://www.amocrm.ru/oauth");
   authorize.searchParams.set("client_id", clientId);
   authorize.searchParams.set("state", state);
-  authorize.searchParams.set("mode", "post_message");
   return json({ authorization_url: authorize.toString(), expires_in: 600 });
 });
