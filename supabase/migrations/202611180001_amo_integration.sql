@@ -139,3 +139,18 @@ for each row execute function public.amo_set_updated_at();
 drop trigger if exists amo_sync_jobs_updated_at on public.amo_sync_jobs;
 create trigger amo_sync_jobs_updated_at before update on public.amo_sync_jobs
 for each row execute function public.amo_set_updated_at();
+
+
+-- OAuth state is short-lived and server-only; it prevents callback CSRF/replay.
+create table if not exists public.amo_oauth_states (
+  state_hash text primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  expires_at timestamptz not null,
+  consumed boolean not null default false,
+  created_at timestamptz not null default now()
+);
+alter table public.amo_oauth_states enable row level security;
+revoke all on public.amo_oauth_states from anon, authenticated;
+grant all on public.amo_oauth_states to service_role;
+create index if not exists amo_oauth_states_expiry_idx
+  on public.amo_oauth_states(expires_at);
