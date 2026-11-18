@@ -6,3 +6,6 @@ verify_jwt = false
 
 [functions.amo-oauth-callback]
 verify_jwt = false
+
+[functions.amo-contact-status]
+verify_jwt = true
