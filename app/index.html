@@ -934,6 +934,33 @@ body.is-home .aurora{opacity:1}
     }catch(ex){console.error("Shared config refresh failed",ex);}
     finally{cloudApplying=false;}
   }
+  async function pullSharedLinks(){
+    if(!ui.me||!ui.me.cloud||!window.SamHelpCloud) return;
+    try{
+      var remote=await window.SamHelpCloud.listShared();
+      ["sheets","apps"].forEach(function(kind){
+        var personal=(state.links[kind]||[]).filter(function(x){return x.owner===ui.me.id});
+        var localGlobal=(state.links[kind]||[]).filter(function(x){return !x.owner&&!x._cloud});
+        if(isAdmin()&&localGlobal.length){
+          var known=(remote[kind]||[]).map(function(x){return x.url});
+          localGlobal.forEach(function(item){
+            if(known.indexOf(item.url)<0){
+              // Migration of existing company-wide links into the shared cloud table.
+              known.push(item.url);
+              remote[kind].push(item);
+              window.SamHelpCloud.addShared(kind,item).then(function(saved){
+                var list=state.links[kind], idx=list.findIndex(function(x){return x.id===item.id});
+                if(idx>=0) list[idx]=saved;
+                save(); render();
+              }).catch(function(ex){console.error("Shared link migration failed",ex)});
+            }
+          });
+        }
+        state.links[kind]=(remote[kind]&&remote[kind].length?remote[kind]:localGlobal).concat(personal);
+      });
+      save();
+    }catch(ex){console.error("Shared links load failed",ex);toast("Не удалось загрузить общие таблицы и программы");}
+  }
   function publishSharedConfig(){
     if(!ui.me||!ui.me.cloud||!isAdmin()||!window.SamHelpCloud) return;
     var cfg=sharedConfigPayload();
@@ -1206,6 +1233,7 @@ body.is-home .aurora{opacity:1}
       cloudContactSnapshot=snapshotContacts(state.contacts);
       cloudContactsReady=true;
       await pullSharedConfig();
+      await pullSharedLinks();
       startCloudListeners();
       save();
       $("aLogin").value="";$("aName").value="";$("aPass").value="";$("aPass2").value="";
@@ -2147,40 +2175,61 @@ body.is-home .aurora{opacity:1}
   }
   $("lScope").addEventListener("change",syncScope);
 
-  $("formLink").addEventListener("submit",function(e){
+  $("formLink").addEventListener("submit",async function(e){
+    e.preventDefault();
     var url=normalizeUrl($("lUrl").value), kind=ui.linkKind;
-    if(!url){e.preventDefault();toast("Вставьте ссылку или путь");return;}
+    if(!url){toast("Вставьте ссылку или путь");return;}
     var scope=isAdmin()?$("lScope").value:"me";
     var it=ui.linkId?findLink(kind,ui.linkId):null;
-    if(it&&!canEditLink(it)){e.preventDefault();return;}
+    if(it&&!canEditLink(it)) return;
     var data={title:$("lTitle").value.trim()||hostOf(url),url:url,note:$("lNote").value.trim()};
     if(kind==="apps"){data.group=scope==="all"?($("lGroup").value.trim()||"Другое"):"";data.icon=$("lIcon").value.trim()||"🔗";}
     else data.icon="📊";
-    if(it){
-      Object.keys(data).forEach(function(k){it[k]=data[k]});
-      if(scope==="me") it.owner=ui.me.id; else delete it.owner;
-    }else{
-      data.id=uid(); if(scope==="me") data.owner=ui.me.id;
-      state.links[kind].push(data);
-    }
-    save(); render(); toast("Сохранено");
+    try{
+      if(scope==="all"&&ui.me.cloud){
+        var saved;
+        if(it&&it._cloud) saved=await window.SamHelpCloud.updateShared(kind,it.id,data);
+        else saved=await window.SamHelpCloud.addShared(kind,data);
+        state.links[kind]=state.links[kind].filter(function(x){return !it||x.id!==it.id});
+        state.links[kind].push(saved);
+      }else{
+        if(it&&it._cloud) await window.SamHelpCloud.deleteShared(kind,it.id);
+        if(it){
+          state.links[kind]=state.links[kind].filter(function(x){return x.id!==it.id});
+        }
+        data.id=uid(); if(scope==="me") data.owner=ui.me.id;
+        state.links[kind].push(data);
+      }
+      save(); render(); $("dlgLink").close(); toast("Сохранено");
+    }catch(ex){console.error("Shared link save failed",ex);toast("Не удалось сохранить ссылку: "+(ex.message||"ошибка"))}
   });
-  $("lCancel").onclick=function(){$("dlgLink").close()};
+    $("lCancel").onclick=function(){$("dlgLink").close()};
   $("lDel").onclick=async function(){
     var it=ui.linkId?findLink(ui.linkKind,ui.linkId):null;
     if(!it||!canEditLink(it)) return;
     if(await appConfirm("Удалить эту ссылку?","Удаление ссылки")){
-      state.links[ui.linkKind]=state.links[ui.linkKind].filter(function(x){return x.id!==ui.linkId});
-      save(); render(); $("dlgLink").close(); toast("Удалено");
+      try{
+        if(it._cloud) await window.SamHelpCloud.deleteShared(ui.linkKind,it.id);
+        state.links[ui.linkKind]=state.links[ui.linkKind].filter(function(x){return x.id!==ui.linkId});
+        save(); render(); $("dlgLink").close(); toast("Удалено");
+      }catch(ex){toast("Не удалось удалить: "+(ex.message||"ошибка"))}
     }
   };
-  $("btnRestore").onclick=function(){
+  $("btnRestore").onclick=async function(){
     if(!isAdmin()) return;
     var kind=ui.tab==="apps"?"apps":"sheets";
     var have=state.links[kind].filter(function(x){return !x.owner}).map(function(x){return x.url}), added=0;
-    DEFAULT_LINKS[kind].forEach(function(d){
-      if(have.indexOf(d.url)<0){var c=clone(d);c.id=uid();state.links[kind].push(c);added++}
-    });
+    for(var i=0;i<DEFAULT_LINKS[kind].length;i++){
+      var d=DEFAULT_LINKS[kind][i];
+      if(have.indexOf(d.url)<0){
+        var item=clone(d);
+        try{
+          if(ui.me.cloud) item=await window.SamHelpCloud.addShared(kind,item);
+          else item.id=uid();
+          state.links[kind].push(item);have.push(item.url);added++;
+        }catch(ex){toast("Не удалось добавить общую ссылку: "+(ex.message||"ошибка"));break}
+      }
+    }
     save(); render(); toast(added?("Добавлено стандартных: "+added):"Все стандартные уже на месте");
   };
   $("listSheets").addEventListener("click",onLinkClick("sheets"));
@@ -2672,6 +2721,7 @@ body.is-home .aurora{opacity:1}
         cloudContactSnapshot=snapshotContacts(state.contacts);
         cloudContactsReady=true;
         await pullSharedConfig();
+        await pullSharedLinks();
         save();enterApp();startCloudListeners();
         return;
       }
