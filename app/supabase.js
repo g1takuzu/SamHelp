@@ -143,11 +143,118 @@
       { method: "DELETE" });
   }
 
+
+  async function listPrivateContacts() {
+    var rows = await request("/rest/v1/private_contacts?select=contact_id,data,updated_at&order=updated_at.asc");
+    return Array.isArray(rows) ? rows : [];
+  }
+  async function upsertPrivateContacts(items) {
+    if (!Array.isArray(items) || !items.length) return [];
+    var user = await getUser();
+    if (!user) throw new Error("Сессия SamHelp завершена");
+    var rows = items.map(function (item) {
+      var data = JSON.parse(JSON.stringify(item));
+      data.owner = user.id;
+      return { user_id: user.id, contact_id: String(data.id), data: data };
+    });
+    return request("/rest/v1/private_contacts?on_conflict=user_id,contact_id", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+      body: rows
+    });
+  }
+  async function deletePrivateContact(contactId) {
+    var user = await getUser();
+    if (!user) throw new Error("Сессия SamHelp завершена");
+    await request("/rest/v1/private_contacts?user_id=eq." + encodeURIComponent(user.id) +
+      "&contact_id=eq." + encodeURIComponent(String(contactId)), { method: "DELETE" });
+  }
+  async function getSharedWorkspace() {
+    var rows = await request("/rest/v1/shared_workspace?select=config,updated_at&id=eq.true&limit=1");
+    return rows && rows.length ? rows[0] : null;
+  }
+  async function saveSharedWorkspace(config) {
+    var user = await getUser();
+    if (!user) throw new Error("Сессия SamHelp завершена");
+    var rows = await request("/rest/v1/shared_workspace?on_conflict=id", {
+      method: "POST",
+      headers: { "Prefer": "resolution=merge-duplicates,return=representation" },
+      body: { id: true, config: config, updated_by: user.id }
+    });
+    return rows && rows[0] || null;
+  }
+  var realtimeSocket = null, realtimeHeartbeat = null, realtimeReconnect = null, realtimeStopped = true;
+  function subscribeCloud(onChange) {
+    realtimeStopped = false;
+    function connect() {
+      if (realtimeStopped || !session || !session.access_token || typeof WebSocket === "undefined") return;
+      var user = session.user;
+      if (!user || !user.id) return;
+      var wsUrl = CONFIG.url.replace(/^https:/, "wss:").replace(/^http:/, "ws:") +
+        "/realtime/v1/websocket?apikey=" + encodeURIComponent(CONFIG.publishableKey) + "&vsn=1.0.0";
+      try { realtimeSocket = new WebSocket(wsUrl); } catch (_) {
+        realtimeReconnect = setTimeout(connect, 4000); return;
+      }
+      realtimeSocket.onopen = function () {
+        if (!realtimeSocket || realtimeSocket.readyState !== 1) return;
+        realtimeSocket.send(JSON.stringify({
+          topic: "realtime:public:samhelp",
+          event: "phx_join",
+          payload: {
+            config: {
+              broadcast: { ack: false, self: false },
+              presence: { key: "" },
+              postgres_changes: [
+                { event: "*", schema: "public", table: "private_contacts", filter: "user_id=eq." + user.id },
+                { event: "*", schema: "public", table: "shared_workspace" }
+              ]
+            },
+            access_token: session.access_token
+          },
+          ref: "1"
+        }));
+        if (realtimeHeartbeat) clearInterval(realtimeHeartbeat);
+        realtimeHeartbeat = setInterval(function () {
+          if (realtimeSocket && realtimeSocket.readyState === 1) {
+            realtimeSocket.send(JSON.stringify({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(Date.now()) }));
+          }
+        }, 25000);
+      };
+      realtimeSocket.onmessage = function (event) {
+        var message;
+        try { message = JSON.parse(event.data); } catch (_) { return; }
+        if (message && message.event === "postgres_changes" && typeof onChange === "function") {
+          try { onChange(message.payload && (message.payload.data || message.payload)); } catch (e) { console.error("SamHelp realtime callback", e); }
+        }
+      };
+      realtimeSocket.onclose = function () {
+        if (realtimeHeartbeat) { clearInterval(realtimeHeartbeat); realtimeHeartbeat = null; }
+        realtimeSocket = null;
+        if (!realtimeStopped) realtimeReconnect = setTimeout(connect, 4000);
+      };
+      realtimeSocket.onerror = function () {
+        try { if (realtimeSocket) realtimeSocket.close(); } catch (_) {}
+      };
+    }
+    connect();
+    return function () {
+      realtimeStopped = true;
+      if (realtimeReconnect) clearTimeout(realtimeReconnect);
+      if (realtimeHeartbeat) clearInterval(realtimeHeartbeat);
+      realtimeReconnect = realtimeHeartbeat = null;
+      if (realtimeSocket) { try { realtimeSocket.close(); } catch (_) {} }
+      realtimeSocket = null;
+    };
+  }
+
   window.SamHelpCloud = {
     configured: true, currentSession: currentSession, getUser: getUser,
     signUp: signUp, signIn: signIn, signOut: signOut, refresh: refresh, roles: roles,
     listUsers: listUsers, setUserRole: setUserRole,
     getSiteCustomizations: getSiteCustomizations, updateSiteCustomizations: updateSiteCustomizations,
-    listShared: listShared, addShared: addShared, updateShared: updateShared, deleteShared: deleteShared
+    listShared: listShared, addShared: addShared, updateShared: updateShared, deleteShared: deleteShared,
+    listPrivateContacts: listPrivateContacts, upsertPrivateContacts: upsertPrivateContacts,
+    deletePrivateContact: deletePrivateContact, getSharedWorkspace: getSharedWorkspace,
+    saveSharedWorkspace: saveSharedWorkspace, subscribeCloud: subscribeCloud
   };
 })();
